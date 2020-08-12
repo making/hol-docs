@@ -1,0 +1,2211 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>VMware Tanzu Application Service (Cloud Foundry) Hands-on Lab</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/codelab-elements/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-77753174-1"></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  id="tas-for-vms-hol"
+                  title="VMware Tanzu Application Service (Cloud Foundry) Hands-on Lab"
+                  environment="web"
+                  feedback-link="https://docs.google.com/document/d/1bNd_n7fOyV1Axbi6AlLnhjyl-_PJkRXXd2h7jgujNEw/edit?usp=sharing">
+    
+      <google-codelab-step label="Hands-on Labに必要なもの" duration="10">
+        <p>このHands-on Lab資料は、準備済みの<a href="https://network.pivotal.io/products/elastic-runtime" target="_blank">Tanzu Application Service for VMs</a>を使用して行うことを前提としていますが、<a href="https://run.pivotal.io" target="_blank">Pivotal Web Services</a>など、その他のCloud Foundry環境でも多くのコンテンツは利用可能です。</p>
+<p>以下のソフトウェアをインストールしてください。</p>
+<ul>
+<li><a href="https://bell-sw.com/pages/downloads/#/java-11-lts" target="_blank">Java 11</a></li>
+<li>CF CLI (v6, v7)</li>
+<li><a href="https://curl.haxx.se/" target="_blank"><code>curl</code></a></li>
+<li><a href="https://stedolan.github.io/jq/" target="_blank"><code>jq</code></a></li>
+<li><code>tar</code></li>
+</ul>
+<p>CF CLI (v6)は<a href="https://github.com/cloudfoundry/cli/releases/tag/v6.51.0" target="_blank">こちら</a>からダウンロードしてください。</p>
+<pre><code>$ cf -v
+cf version 6.51.0+2acd15650.2020-04-07</code></pre>
+<p><br>CF CLI (v7)は<a href="https://github.com/cloudfoundry/cli/releases/tag/v7.0.1" target="_blank">こちら</a>からダウンロードしてください。cf7という名前で使用します。</p>
+<pre><code>$ cf7 -v                                        
+cf7 version 7.0.1+fb3f929c2.2020-06-24</code></pre>
+<aside class="warning"><p>Note: <code>cf7</code>が正式に利用できるのは<a href="https://docs.pivotal.io/platform/2-10/release-notes/runtime-rn.html#cf-cli" target="_blank">TAS 2.10</a>からです。</p>
+</aside>
+<aside class="special"><p>Note: 執筆時に動作確認した環境には次のプロダクトがインストールされています。</p>
+<ul>
+<li><a href="https://network.pivotal.io/products/elastic-runtime" target="_blank">Tanzu Application Service for VMs</a> 2.8.9</li>
+<li><a href="https://network.pivotal.io/products/credhub-service-broker" target="_blank">Credhub Service Broker</a> 1.4.8</li>
+<li><a href="https://network.pivotal.io/products/apm" target="_blank">App Metrics</a> 2.0.2</li>
+<li><a href="https://network.pivotal.io/products/p-metric-store" target="_blank">Metric Store</a> 1.4.2</li>
+<li><a href="https://github.com/making/elephantsql-service-broker" target="_blank">ElephantSQL Service Broker</a></li>
+</ul>
+</aside>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Tanzu Application Serviceにログイン" duration="15">
+        <p><br>次のコマンドでHands-on Lab用の環境にログインします。</p>
+<pre><code>cf login -a api.sys.dev.example.com -o hol --sso</code></pre>
+<aside class="warning"><p>Note: <code>用�</code>�されたHands-on Lab用の環境以外の環境で実施する場合は、その環境に合わせてログインしてください。</p>
+</aside>
+<p>次のように認証コードの入力が求められますので、<a href="https://login.sys.dev.example.com/passcode" target="_blank">https://login.sys.dev.example.com/passcode</a>にSSOでログインして認証コードを取得し、コンソールに入力してください。</p>
+<pre><code>API endpoint: api.sys.dev.example.com
+
+Temporary Authentication Code ( Get one at https://login.sys.dev.example.com/passcode ): </code></pre>
+<p>認証コードを入力すると、ログインが成功し、次のように自動でSpaceが設定されていることを確認してください。</p>
+<pre><code>Authenticating...
+OK
+
+
+Targeted org hol
+
+Targeted space tmaki
+
+
+
+API endpoint:   https://api.sys.dev.example.com (API version: 3.77.0)
+User:           tmaki@pivotal.io
+Org:            hol
+Space:          tmaki</code></pre>
+<p>次のコマンドでアクセスしている環境の情報を確認してください。</p>
+<pre><code>$ cf curl /info
+{
+   &#34;name&#34;: &#34;Pivotal Application Service&#34;,
+   &#34;build&#34;: &#34;2.8.9-build.3&#34;,
+   &#34;support&#34;: &#34;https://support.pivotal.io&#34;,
+   &#34;version&#34;: 0,
+   &#34;description&#34;: &#34;https://docs.pivotal.io/pivotalcf/2-8/pcf-release-notes/runtime-rn.html&#34;,
+   &#34;authorization_endpoint&#34;: &#34;https://login.sys.dev.example.com&#34;,
+   &#34;token_endpoint&#34;: &#34;https://uaa.sys.dev.example.com&#34;,
+   &#34;allow_debug&#34;: true,
+   &#34;user&#34;: &#34;4662f460-8b18-45b1-bde8-c409c4e6b123&#34;,
+   &#34;limits&#34;: {
+      &#34;memory&#34;: 2048,
+      &#34;app_uris&#34;: 4,
+      &#34;services&#34;: 16,
+      &#34;apps&#34;: 20
+   },
+   &#34;usage&#34;: {
+      &#34;memory&#34;: 0,
+      &#34;apps&#34;: 0,
+      &#34;services&#34;: 0
+   }
+}</code></pre>
+<aside class="warning"><p>Note: WindowsでGit Bashを使う場合は<br><code>export MSYS_NO_PATHCONV=1</code></p>
+<p>を設定してください。</p>
+</aside>
+<aside class="special"><p>Note: TAS 2.9からは<code>name</code>が<code>VMware Tanzu Application Service</code>になります。</p>
+</aside>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="雛形アプリケーションのデプロイ" duration="30">
+        <h2 is-upgraded>Spring Initialzrで雛形アプリケーションの作成</h2>
+<p><a href="https://start.spring.io" target="_blank">Spring Initializr</a>でSpring Bootの雛形アプリケーションを作成し、cf pushで早速デプロイします。</p>
+<p>作業場所として<code>hol</code>ディレクトリを作成してください。</p>
+<pre><code>mkdir hol
+cd hol</code></pre>
+<p><br>次のコマンドで雛形アプリケーションを作成します。</p>
+<pre><code>curl https://start.spring.io/starter.tgz \
+       -d artifactId=hello-cf \
+       -d baseDir=hello-cf \
+       -d dependencies=web,actuator,configuration-processor,prometheus \
+       -d packageName=com.example \
+       -d applicationName=HelloCfApplication | tar -xzvf -</code></pre>
+<p><br>次のコマンドでアプリケーションをビルドします。</p>
+<pre><code>cd hello-cf
+./mvnw clean package -Dmaven.test.skip=true</code></pre>
+<aside class="warning"><p>Note: WindowsでGit Bashを使う場合は<code>./mvnw</code>の代わりに<code>./mvnw.cmd</code>を使ってください。</p>
+</aside>
+<h2 is-upgraded><br>cf pushでデプロイ</h2>
+<p><code>hello-cf</code>ディレクトリの下に<code>manifest.yml</code>を作成し、次の内容を記述してください。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;</code></pre>
+<aside class="warning"><p>Note: Hands-on Labでは複数の人が同じnameでアプリケーションをデプロイします。デフォルトではアプリケーションのURLのHost部分がnameと同じになるため、URLの衝突が発生します。これを回避するために<code>random-route: true</code>をつけて、Host部分にランダムな文字列を追記するようにします。</p>
+</aside>
+<p><code>cf push</code>でアプリケーションを再度デプロイします。</p>
+<pre><code>cf push</code></pre>
+<p><br>次のコマンドで</p>
+<pre><code># ランダムな文字列を含むHost部分を取得し、変数に設定する
+HOST=$(cf curl /v2/apps/$(cf app hello-cf --guid)/routes | jq -r &#34;.resources[0].entity.host&#34;)
+
+# Spring Boot AcutatorのHealthエンドポイントにアクセス
+curl -s https://${HOST}.apps.dev.example.com/actuator/health -w &#39;\n&#39;</code></pre>
+<p><br>次のように出力されればOKです。</p>
+<pre><code>{&#34;status&#34;:&#34;UP&#34;}</code></pre>
+<h2 is-upgraded>Spring Boot Actuatorのエンドポイント公開</h2>
+<p><a href="https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html" target="_blank">Spring Boot Actuator</a>には運用に役立つ便利なエンドポイントが多数用意されています。デフォルトでは<code>/actuator/info</code>と<code>/actuator/health</code>のみ公開されています。<code>manifest.yml</code>に次の環境変数を設定して、<code>/actuator/env</code>と<code>/actuator/prometheus</code>も公開しましょう。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    # ⭐️⭐️⭐️
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: info,health,env,prometheus</code></pre>
+<p><code>cf push</code>でアプリケーションをデプロイします。</p>
+<pre><code>cf push</code></pre>
+<p>次のコマンドで各エンドポイントにアクセスしてください。</p>
+<pre><code># 公開中のActuatorエンドポイントの列挙
+curl -s https://${HOST}.apps.dev.example.com/actuator | jq .
+
+# Envエンドポイントにアクセス
+curl -s https://${HOST}.apps.dev.example.com/actuator/env | jq .
+
+# Prometheusエンドポイントにアクセス
+curl -s https://${HOST}.apps.dev.example.com/actuator/prometheus</code></pre>
+<aside class="special"><p>Note: Envエンドポイントはアプリケーションの内部情報を含むため、publicに公開しないのが一般的です。</p>
+</aside>
+<h2 is-upgraded>Infoエンドポイントの活用</h2>
+<p>Infoエンドポイントは<code>info.</code>から始まるプロパティまたは、<code>INFO_</code>から始まる環境変数をJSON形式で出力します。動作アプリのバージョンなど含めておくと便利です。</p>
+<p><code>manifest.yml</code>に次の環境変数を設定してください。<br></p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: info,health,env,prometheus
+    # ⭐️⭐️⭐️
+    INFO_VERSION: 0.0.1
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}</code></pre>
+<p><code>cf push</code>でアプリケーションを再度デプロイします。</p>
+<pre><code>cf push</code></pre>
+<p><br>次のコマンドでInfoエンドポイントにアクセスしてください。</p>
+<pre><code>$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq .
+{
+  &#34;java&#34;: {
+    &#34;vendor&#34;: &#34;Pivotal Software Inc&#34;,
+    &#34;version&#34;: &#34;11.0.6+10&#34;
+  },
+  &#34;version&#34;: &#34;0.0.1&#34;
+}</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="ログの確認" duration="5">
+        <p>アプリケーションのログは<code>cf logs</code>コマンドで確認できます。<code>--recent</code>オプションをつけることで、直近のログを確認できます。</p>
+<pre><code>cf logs hello-cf --recent</code></pre>
+<p><br>オプションをつけない場合は、ログを追跡します。</p>
+<pre><code>cf logs hello-cf</code></pre>
+<p>後ほどApps ManagerやApp Metricsでもログを確認します。<br></p>
+<aside class="special"><p>Note: アプリケーションエンジニアの責任範囲内で、アプリ単位でlogを外部のSyslog Serverに転送したい場合は、<a href="https://docs.cloudfoundry.org/devguide/services/log-management.html" target="_blank">Syslog Drain</a>という機能を利用できます。</p>
+<p><a href="https://docs.pivotal.io/platform/application-service/2-8/loggregator/agent-architecture.html" target="_blank">Aggregate Syslog Drain</a>というPlatformの機能を使い、全てのアプリログをSyslog Serverに転送することもできます。</p>
+</aside>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Apps Managerの確認およびSpring Boot Actuator連携" duration="30">
+        <p>Apps Manager(<a href="https://apps.sys.dev.example.com" target="_blank">https://apps.sys.dev.example.com</a>)にアクセスしてください。</p>
+<p>hol Org &gt; ユーザー名 Space &gt; hello-cfと選択してください。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/9ee66ffa90cdaf1a.png"></p>
+<p>アプリケーションにSpring Boot Actuatorが含まれている場合は、Apps ManagerからSpring Boot Actuatorのエンドポイントにアクセスできます。<img style="width: 29.66px" src="img/c108897736d6085f.png">マークがついていれば連携できています。<br><a href="https://docs.pivotal.io/platform/application-service/2-8/console/using-actuators.html" target="_blank">https://docs.pivotal.io/platform/application-service/2-8/console/using-actuators.html</a></p>
+<h2 is-upgraded>Healthエンドポイントの確認</h2>
+<p>インスタンス情報の左の&#34; &gt; &#34;をクリックしてください。Healthエンドポイントの情報が詳細付きで表示されます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/8211348a2d1074c9.png"></p>
+<aside class="special"><p>Note: Healthエンドポイントの詳細の見せ方は<code>management.endpoint.health.show-details</code>プロパティで変更できますが、publicなエンドポイントには詳細を見せないのが一般的です。Apps Manager経由でアクセスした場合は詳細が表示されます。</p>
+</aside>
+<h2 is-upgraded>Infoエンドポイントの確認</h2>
+<p>左のメニューの&#34;Settings&#34;をクリックし、&#34;Spring Boot Info&#34;の&#34;VIEW RAW JSON&#34;をクリックしてください。<code>curl</code>で確認した時と同じ情報を見ることができます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/b5ab63b5db0767cd.png"></p>
+<aside class="special"><p>Note: <code>MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE</code>から<code>info</code>を除外しても、Apps ManagerからはInfoエンドポイントにアクセスできます。Infoエンドポイントの内容をpublicにしたくない場合<code>はMANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLU</code>DEに<code>info</code>を含めず、Apps Managerからのみ確認できるようにしておくと良いです。</p>
+</aside>
+<aside class="special"><p>Note: 次の設定を行い、ビルド時にgitの情報を埋め込むとApps Manager上にgitの情報も表示されるようになります。</p>
+<ul>
+<li><a href="https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html#production-ready-application-info-git" target="_blank">https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html#production-ready-application-info-git</a></li>
+<li><a href="https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html#howto-git-info" target="_blank">https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html#howto-git-info</a></li>
+</ul>
+<p class="image-container"><img style="width: 601.70px" src="img/ae86edcebf66b3ed.png"></p>
+<p><a href="https://docs.pivotal.io/platform/application-service/2-8/console/using-actuators.html#view-build" target="_blank">https://docs.pivotal.io/platform/application-service/2-8/console/using-actuators.html#view-build</a></p>
+</aside>
+<h2 is-upgraded>ThreadDumpエンドポイントの確認</h2>
+<p>左のメニューの&#34;Threads&#34;をクリックしてください。アプリケーションのスレッドダンプを取得できます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/4b1fc793c7a400.png"></p>
+<h2 is-upgraded>Loggingエンドポイントの確認</h2>
+<p>左のメニューの&#34;Logs&#34;をクリックしてください。<code>cf logs --recent</code>コマンドと同じく直近のログを確認できます。<img style="width: 25.96px" src="img/5f59a1de02197201.png">ボタンをクリックするとログをtailできます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/402cb1ac5055d46d.png"></p>
+<p>&#34;CONFIGURE LOGGING LEVEL&#34;ボタンをクリックするとログレベルを動的に変更するためのダイアログが表示されます。検索フィールドに&#34;DispatcherServlet&#34;を入力し、レベルをDEBUGに変更してください。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/c6f373ec75cab0c4.png"></p>
+<p><img style="width: 25.96px" src="img/5f59a1de02197201.png">ボタンをクリックして、ログをtailしている状態で、アプリケーションにアクセスするとDispatcherServletのDEBUGログが出力されることを確認できます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/2deef386203b838c.png"></p>
+<p>この変更はアプリケーションが再起動されるまで反映されます。トラブルシュートのためにアプリケーションを再起動することなく一時的にDEBUGログを出力したい場合に有用です。</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="App Metricsの確認" duration="15">
+        <p>Apps Metricsを使用するとアプリケーションのログとメトリクスを確認できます。<code>cf logs</code>とは異なり、ログは永続化されているため過去のログを検索することもできます。</p>
+<p>Apps Managerの&#34;View in PCF Metrics&#34;をクリックしてください。(バージョンアップすると文言は&#34;View in App Metrics&#34;に変わります。) </p>
+<h2 is-upgraded><img style="width: 601.70px" src="img/fad97189846b7eb0.png"></h2>
+<aside class="warning"><p>Note: Chromeの拡張で、AdBlockが有効になっている場合、App Metricsにアクセスできません。リンクも表示されません。AdBlockを無効にしてください。</p>
+</aside>
+<p>次のようなメトリクスが表示されます。<img style="width: 601.70px" src="img/8d94b023199eb584.png"></p>
+<aside class="special"><p>Note: 一行目に表示される3つのメトリクスはREDメトリクスと呼ばれ、一般的に計測すべき最重要なメトリクスです。</p>
+<ul>
+<li><strong>R</strong>ate ... App Metricsのデフォルトは、アプリへの分間リクエスト数 (HTTP Request Count (per minute))</li>
+<li><strong>E</strong>rror ... App Metricsのデフォルトは、アプリの分間500エラー数 (HTTP Request Errors)。500以外のエラーも含めた方が良い。</li>
+<li><strong>D</strong>uration ... App Metricsのデフォルトは、アプリの平均レイテンシ (HTTP Request Latency in milliseconds)。95 percentileとかの方が良い。</li>
+</ul>
+</aside>
+<p>&#34;LOGS&#34;をクリックするとアプリケーションログが表示されます。</p>
+<h2 is-upgraded><img style="width: 601.70px" src="img/4206d614cdbf9373.png"></h2>
+<p>デフォルトではアプリケーションログのみ表示されます。&#34;App (Application)&#34;をクリックして、&#34;ALL&#34;または&#34;RTR (Router)&#34;を選択し、&#34;APPLY&#34;ボタンをクリックしてください。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/eb9f16c7b05051cf.png"></p>
+<p>アクセスログも表示されます。アクセスログも常にチェックしておくと良いです。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/b486f5d9b7f0bc11.png"></p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="環境変数の設定およびUser Provided Serviceの使い方" duration="60">
+        <p>アプリにプロパティを設定する方法をいくつか見ていきます。</p>
+<h2 is-upgraded>アプリケーションへ環境変数の埋め込み</h2>
+<p>まずはアプリケーションに環境変数で変更可能なプロパティ(<code>api.key</code>)を作成し、アプリケーションがそのプロパティを使うようにします。</p>
+<p>次のファイルを新規作成してください。<br></p>
+<p><code>src/main/java/com/example/ApiProperties.java</code></p>
+<pre><code>package com.example;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Component
+@ConfigurationProperties(prefix = &#34;api&#34;)
+public class ApiProperties {
+
+    private String key = &#34;SECRET&#34;;
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+}</code></pre>
+<p><code>src/main/java/com/example/HelloController.java</code></p>
+<pre><code>package com.example;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class HelloController {
+
+    private final ApiProperties props;
+
+    public HelloController(ApiProperties props) {
+        this.props = props;
+    }
+
+    @GetMapping(path = &#34;/&#34;)
+    public ResponseEntity&lt;?&gt; hello(@RequestHeader(name = &#34;X-Api-Key&#34;, required = false) String apiKey) {
+        if (props.getKey().equals(apiKey)) {
+            return ResponseEntity.ok(&#34;Hello&#34;);
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(&#34;Forbidden&#34;);
+        }
+    }
+}</code></pre>
+<p><br>まずは<code>manifest.yml</code>に次のように環境変数<code>API_KEY</code>をハードコードします。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: info,health,env,prometheus
+    INFO_VERSION: 0.0.2 # ⭐️
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    # ⭐️⭐️⭐️
+    API_KEY: opensesami</code></pre>
+<aside class="special"><p>Note: Spring Bootでは<code>foo.bar-baz</code>というプロパティを環境変数で設定する場合は、&#34;<code>.</code>&#34;や&#34;<code>-</code>&#34;が使えないので、代わりに<code>FOO_BARBAZ</code>という名前を使うことができます。</p>
+</aside>
+<p><br>アプリケーションをビルドして再度<code>cf push</code>します。</p>
+<pre><code>./mvnw clean package -Dmaven.test.skip=true
+cf push</code></pre>
+<p><br>HTTPリクエストヘッダー&#34;<code>X-Api-Key</code>&#34;が<code>opensesami</code>の場合のみ<code>Hello</code>が返り、それ以外の場合は<code>Forbidden</code>が返ります。</p>
+<pre><code>$ curl -sv https://${HOST}.apps.dev.example.com
+&gt; GET / HTTP/1.1
+&gt; Host: hello-cf-bold-lion-rf.apps.dev.example.com
+&gt; User-Agent: curl/7.47.0
+&gt; Accept: */*
+&gt; 
+&lt; HTTP/1.1 403 Forbidden
+&lt; Content-Length: 9
+&lt; Content-Type: text/plain;charset=UTF-8
+&lt; Date: Fri, 03 Jul 2020 09:56:57 GMT
+&lt; X-Vcap-Request-Id: 91d58464-be27-4101-4e21-24d395def6d4
+&lt; 
+Forbidden
+
+$ curl -sv -H &#34;X-Api-Key: opensesami&#34; https://${HOST}.apps.dev.example.com
+&gt; GET / HTTP/1.1
+&gt; Host: hello-cf-bold-lion-rf.apps.dev.example.com
+&gt; User-Agent: curl/7.47.0
+&gt; Accept: */*
+&gt; X-Api-Key: opensesami
+&gt; 
+&lt; HTTP/1.1 200 OK
+&lt; Content-Length: 5
+&lt; Content-Type: text/plain;charset=UTF-8
+&lt; Date: Fri, 03 Jul 2020 09:57:39 GMT
+&lt; X-Vcap-Request-Id: 956e9ec3-60c6-494c-4879-dc52f76e1d33
+&lt; 
+Hello</code></pre>
+<h2 is-upgraded>User Provided Serviceを経由して環境変数の設定</h2>
+<p><code>manifest.yml</code>は通常gitで管理します。gitで管理されるファイルに直接API Keyをハードコードするのはセキュアではありません。手元のファイルに記述する代わりにPlatform側に保存しましょう。まずは<a href="https://docs.cloudfoundry.org/devguide/services/user-provided.html" target="_blank">User Provided Service</a>を使用します。次のコマンドで<code>hello</code>サービスインスタンスを作成します。<br></p>
+<pre><code>cf create-user-provided-service hello -p &#39;{&#34;api-key&#34;:&#34;OPENSESAMI&#34;}&#39;</code></pre>
+<p><code>hello</code>サービスインスタンスを<code>hello-cf</code>アプリにバインドするように<code>manifest.yml</code>を編集します。また、環境変数<code>API_KEY</code>の値を<code>hello</code>サービスインスタンスから<code>api-key</code>を取得するようにします。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  # ⭐️⭐️⭐️
+  services:
+  - hello
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: info,health,env,prometheus
+    INFO_VERSION: 0.0.2
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    # ⭐️⭐️⭐️
+    API_KEY: ${vcap.services.hello.credentials.api-key}</code></pre>
+<aside class="special"><p>Note: <code>${vcap.services.&lt;service instance name&gt;.credentials.&lt;key name&gt;}</code>形式でサービスインスタンスから値を取得できるのはSpring Bootの機能です。その他の言語、フレームワークを使用する場合は環境変数<code>VCAP_SERVICES</code>からJSON文字列を取得し、これをパースして値を取得する必要があります。使用例は<a href="https://blog.ik.am/entries/529" target="_blank">こちら</a>。</p>
+<p>あるいは有志によるPancake Buildpackを使うことで環境変数<code>VCAP_SERVICES</code>からJSON文字列をflatな環境変数に設定し直すこともできます。</p>
+<p><a href="https://github.com/starkandwayne/pancake-buildpack" target="_blank">https://github.com/starkandwayne/pancake-buildpack</a></p>
+</aside>
+<p><code>cf push</code>で再度デプロイします。</p>
+<pre><code>cf push</code></pre>
+<p>今度はHTTPリクエストヘッダー&#34;<code>X-Api-Key</code>&#34;が<code>OPENSESAMI</code>の場合のみ<code>Hello</code>が返り、それ以外の場合は<code>Forbidden</code>が返ります。</p>
+<pre><code>$ curl -sv -H &#34;X-Api-Key: opensesami&#34; https://${HOST}.apps.dev.example.com
+&gt; GET / HTTP/1.1
+&gt; Host: hello-cf-bold-lion-rf.apps.dev.example.com
+&gt; User-Agent: curl/7.47.0
+&gt; Accept: */*
+&gt; X-Api-Key: opensesami
+&gt; 
+&lt; HTTP/1.1 403 Forbidden
+&lt; Content-Length: 9
+&lt; Content-Type: text/plain;charset=UTF-8
+&lt; Date: Fri, 03 Jul 2020 09:56:57 GMT
+&lt; X-Vcap-Request-Id: 91d58464-be27-4101-4e21-24d395def6d4
+&lt; 
+Forbidden
+
+$ curl -sv -H &#34;X-Api-Key: OPENSESAMI&#34; https://${HOST}.apps.dev.example.com
+&gt; GET / HTTP/1.1
+&gt; Host: hello-cf-bold-lion-rf.apps.dev.example.com
+&gt; User-Agent: curl/7.47.0
+&gt; Accept: */*
+&gt; X-Api-Key: OPENSESAMI
+&gt; 
+&lt; HTTP/1.1 200 OK
+&lt; Content-Length: 5
+&lt; Content-Type: text/plain;charset=UTF-8
+&lt; Date: Fri, 03 Jul 2020 09:57:39 GMT
+&lt; X-Vcap-Request-Id: 956e9ec3-60c6-494c-4879-dc52f76e1d33
+&lt; 
+Hello</code></pre>
+<p><br>User Provided Serviceを使うことで<code>manifest.yml</code>にAPI Keyをハードコードしなくても済むようになりましたが、User Provided Serviceに格納した情報は暗号化されるわけではないので、機密情報を保存する場所としてはセキュアではありません。また次のように<code>cf env</code>コマンドで設定値を見ることもできます。次のセクションでよりセキュアなCredHub Service Brokerを利用します。</p>
+<pre><code>$ cf env hello-cf
+Getting env variables for app hello-cf in org hol / space tmaki as tmaki@pivotal.io...
+OK
+
+System-Provided:
+{
+ &#34;VCAP_SERVICES&#34;: {
+  &#34;user-provided&#34;: [
+   {
+    &#34;binding_name&#34;: null,
+    &#34;credentials&#34;: {
+     ⭐️⭐️⭐️&#34;api-key&#34;: &#34;OPENSESAMI&#34;
+    },
+    &#34;instance_name&#34;: &#34;hello&#34;,
+    &#34;label&#34;: &#34;user-provided&#34;,
+    &#34;name&#34;: &#34;hello&#34;,
+    &#34;syslog_drain_url&#34;: &#34;&#34;,
+    &#34;tags&#34;: [],
+    &#34;volume_mounts&#34;: []
+   }
+  ]
+ }
+}
+... (略) ...</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="CredHub Service Brokerを使って機密情報をアプリから参照" duration="15">
+        <p>機密情報を保存する場所としてはセキュアな場所としてCredHubが適切です。User Provided Serviceの代わりに<a href="https://docs.pivotal.io/credhub-service-broker/" target="_blank">CredHub Service Broker</a>を使うことでcfコマンドで機密情報をCredHubに登録でき、かつUser Provided Serviceと同じように扱えます。</p>
+<p>まずは次のコマンドで、先に作成した<code>hello</code>サービスインスタンスを<code>hello-cf</code>アプリからアンバインドし、<code>hello</code>サービスインスタンスを削除します。</p>
+<pre><code>cf unbind-service hello-cf hello
+cf delete-service -f hello</code></pre>
+<p><br>次のコマンドでCredhub ServiceがMarketplaceに存在することを確認してください。</p>
+<pre><code>$ cf marketplace
+Getting services from marketplace in org hol / space tmaki as tmaki@pivotal.io...
+OK
+
+service          plans      description                                                                    broker
+
+app-autoscaler   standard   Scales bound applications in response to load                                  app-autoscaler
+smb              Existing   Existing SMB shares (see: https://code.cloudfoundry.org/smb-volume-release/)   smbbroker
+⭐️⭐️⭐️credhub          default    Stores configuration parameters securely in CredHub                            credhub-broker
+elephantsql      turtle     PostgreSQL as a Service                                                        elephantsql
+
+TIP: Use &#39;cf marketplace -s SERVICE&#39; to view descriptions of individual plans of a given service.</code></pre>
+<p><br>次のコマンドでCredHub ServiceのPlanを確認します。</p>
+<pre><code>$ cf marketplace -s credhub
+Getting service plan information for service credhub as tmaki@pivotal.io...
+OK
+
+service plan   description                                           free or paid
+default        Stores configuration parameters securely in CredHub   free</code></pre>
+<p><br><br>次のコマンドで<code>hello</code>サービスインスタンスを作成します。</p>
+<pre><code>cf create-service credhub default hello -c &#39;{&#34;api-key&#34;: &#34;OpenSesami&#34;}&#39;</code></pre>
+<p><br>次のコマンドでリバインド＆リスタートまたは再pushしてください。</p>
+<pre><code>cf bind-service hello-cf hello
+cf restart hello-cf
+
+# または
+
+cf push</code></pre>
+<p><br>User Provided Serviceの場合と同じようにアクセスできることを確認してください。</p>
+<pre><code>$ curl -sv -H &#34;X-Api-Key: opensesami&#34; https://${HOST}.apps.dev.example.com
+&gt; GET / HTTP/1.1
+&gt; Host: hello-cf-bold-lion-rf.apps.dev.example.com
+&gt; User-Agent: curl/7.47.0
+&gt; Accept: */*
+&gt; X-Api-Key: opensesami
+&gt; 
+&lt; HTTP/1.1 403 Forbidden
+&lt; Content-Length: 9
+&lt; Content-Type: text/plain;charset=UTF-8
+&lt; Date: Fri, 03 Jul 2020 09:56:57 GMT
+&lt; X-Vcap-Request-Id: 91d58464-be27-4101-4e21-24d395def6d4
+&lt; 
+Forbidden
+
+$ curl -sv -H &#34;X-Api-Key: OPENSESAMI&#34; https://${HOST}.apps.dev.example.com
+&gt; GET / HTTP/1.1
+&gt; Host: hello-cf-bold-lion-rf.apps.dev.example.com
+&gt; User-Agent: curl/7.47.0
+&gt; Accept: */*
+&gt; X-Api-Key: OPENSESAMI
+&gt; 
+&lt; HTTP/1.1 403 Forbidden
+&lt; Content-Length: 9
+&lt; Content-Type: text/plain;charset=UTF-8
+&lt; Date: Wed, 22 Jul 2020 14:58:44 GMT
+&lt; X-Vcap-Request-Id: 6561440e-2f31-4199-7f0c-b39c10c64a51
+&lt; 
+Forbidden
+
+
+$ curl -sv -H &#34;X-Api-Key: OpenSesami&#34; https://${HOST}.apps.dev.example.com
+&gt; GET / HTTP/1.1
+&gt; Host: hello-cf-bold-lion-rf.apps.dev.example.com
+&gt; User-Agent: curl/7.47.0
+&gt; Accept: */*
+&gt; X-Api-Key: OpenSesami
+&gt; 
+&lt; HTTP/1.1 200 OK
+&lt; Content-Length: 5
+&lt; Content-Type: text/plain;charset=UTF-8
+&lt; Date: Fri, 03 Jul 2020 09:57:39 GMT
+&lt; X-Vcap-Request-Id: 956e9ec3-60c6-494c-4879-dc52f76e1d33
+&lt; 
+Hello</code></pre>
+<p><code>cf env</code>を実行してもAPI Keyの値が表示されないことを確認してください。</p>
+<pre><code>$ cf env hello-cf
+Getting env variables for app hello-cf in org hol / space tmaki as tmaki@pivotal.io...
+OK
+
+System-Provided:
+{
+ &#34;VCAP_SERVICES&#34;: {
+  &#34;credhub&#34;: [
+   {
+    &#34;binding_name&#34;: null,
+    &#34;credentials&#34;: {
+     ⭐️⭐️⭐️&#34;credhub-ref&#34;: &#34;/credhub-service-broker/credhub/c7b80368-3e4c-4ede-9b03-b26eafb30db9/credentials&#34; 
+    },
+    &#34;instance_name&#34;: &#34;hello&#34;,
+    &#34;label&#34;: &#34;credhub&#34;,
+    &#34;name&#34;: &#34;hello&#34;,
+    &#34;plan&#34;: &#34;default&#34;,
+    &#34;provider&#34;: null,
+    &#34;syslog_drain_url&#34;: null,
+    &#34;tags&#34;: [
+     &#34;credhub&#34;
+    ],
+    &#34;volume_mounts&#34;: []
+   }
+  ]
+ }
+}
+... (略) ...</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="アプリケーションのアップデート" duration="75">
+        <p>アプリケーションのアップデートの方法を学びます。<code>cf push</code>コマンドでアプリケーションを再デプロイした場合は旧版のStop -&gt; 新版のStartというStepになります。この間はアプリケーションにアクセスできません(404エラー)。Tanzu Application Serviceではダウンタイムを起こさずにアプリケーションを更新する方法として、</p>
+<ul>
+<li>Blue-Green Update</li>
+<li>Rolling Update</li>
+</ul>
+<p>が利用できます。</p>
+<h2 is-upgraded>Blue-Green Update</h2>
+<p>Blue-Green Updateは旧版と新版を同居した状態で両方のアプリにリクエストがルーティングされるようにし、新版でも問題なく動作することを確認したのちに、旧版へのルーティングを削除する手法です。フィードバックを受けながら徐々に新版に移行できる点と、新版に問題がある場合は旧版に切り戻しやすい点が特徴です。Blue-Green Updateでは旧版と新版は別の独立したアプリケーションとして扱われます。Tanzu Application Serviceでは旧版と新版へのリクエスト比率はそれぞれのインスタンス数に比例します。旧版と新版を同居させる場合、通常は余剰なリソースが必要になります。</p>
+<p><a href="https://docs.cloudfoundry.org/devguide/deploy-apps/blue-green.html" target="_blank">https://docs.cloudfoundry.org/devguide/deploy-apps/blue-green.html</a></p>
+<p>現在稼働中の<code>hello-cf</code>アプリをBlueとします。</p>
+<p class="image-container"><img style="width: 600.00px" src="img/e7495e8cffd6e8ad.png"></p>
+<p>BlueのバージョンをSpring Boot ActuatorのInfoエンドポイントで確認します。<br></p>
+<pre><code>$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.2</code></pre>
+<p>次に新版(Green)をデプロイします。ここではアプリケーションのソースコードは変更せず、環境変数<code>INFO_VERSION</code>のみ変更します。<br><code>manifest.yml</code>を次のように変更してください。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  services:
+  - hello
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    INFO_VERSION: 0.0.3 # ⭐️
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    API_KEY: ${vcap.services.hello.credentials.api-key}</code></pre>
+<p><br>この<code>manifest.yml</code>を使い、アプリケーションを別名でpushします。</p>
+<pre><code>cf push hello-cf-green</code></pre>
+<p><code>cf apps</code>コマンドでアプリケーション一覧を表示し、二つのアプリケーションが稼働していることを確認してください。</p>
+<pre><code>$ cf apps
+Getting apps in org hol / space tmaki as tmaki@pivotal.io...
+OK
+
+name             requested state   instances   memory   disk   urls
+hello-cf         started           1/1         768M     1G     hello-cf-bold-lion-rf.apps.dev.example.com
+hello-cf-green   started           1/1         768M     1G     hello-cf-green-hilarious-rabbit-nz.apps.dev.example.com</code></pre>
+<p><br>次の図のような状態になっています。</p>
+<p class="image-container"><img style="width: 600.00px" src="img/81ca53f831b20a35.png"></p>
+<p><code>hello-cf-green</code>アプリに割り当てられたランダムなHost部を次のコマンドで取得します。</p>
+<pre><code>HOST_NEW=$(cf curl /v2/apps/$(cf app hello-cf-green --guid)/routes | jq -r &#34;.resources[0].entity.host&#34;)</code></pre>
+<p>GreenのバージョンをSpring Boot ActuatorのInfoエンドポイントで確認します。<br></p>
+<pre><code>$ curl -s https://${HOST_NEW}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.3</code></pre>
+<p>この段階ではBlueのバージョンに変更がないことも確認してください。<br></p>
+<pre><code>$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.2</code></pre>
+<p><br>現時点ではBlueとGreenは全く別のアプリケーションとしてそれぞれ存在しています。GreenのURLはエンドユーザーには知られていないため、安全にテスト可能です。</p>
+<p>次に、次の図のようにBlueに対するルートつまり、エンドユーザーが利用するURLをGreenにもマッピングします。これでエンドユーザーはBlueかGreenどちらかのアプリケーションにルーティングされます。</p>
+<p class="image-container"><img style="width: 600.00px" src="img/9823f83da602742b.png"></p>
+<p>次の<code>cf map-route</code>コマンドで<code>hello-cf-green</code>アプリに対して<code>hello-cf</code>と同じルートをマッピングします。</p>
+<pre><code>$ cf map-route hello-cf-green apps.dev.example.com -n ${HOST}
+Creating route hello-cf-bold-lion-rf.apps.dev.example.com for org hol / space tmaki as tmaki@pivotal.io...
+OK
+Route hello-cf-bold-lion-rf.apps.dev.example.com already exists
+Adding route hello-cf-bold-lion-rf.apps.dev.example.com to app hello-cf-green in org hol / space tmaki as tmaki@pivotal.io...
+OK</code></pre>
+<p><code>cf apps</code>コマンドでアプリケーション一覧を表示し、<code>hello-cf-green</code>アプリには二つのルートがマッピングされていることを確認してください。</p>
+<pre><code>$ cf apps
+Getting apps in org hol / space tmaki as tmaki@pivotal.io...
+OK
+
+name             requested state   instances   memory   disk   urls
+hello-cf         started           1/1         768M     1G     hello-cf-bold-lion-rf.apps.dev.example.com
+hello-cf-green   started           1/1         768M     1G     hello-cf-bold-lion-rf.apps.dev.example.com, hello-cf-green-hilarious-rabbit-nz.apps.dev.example.com</code></pre>
+<p><br>元々BlueにマッピングされていたURLに何度かアクセスしてください。新旧両方のバージョンがRound-Robinで返ります。</p>
+<pre><code>$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.2
+$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.3
+$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.2
+$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.3</code></pre>
+<p>次に、次の図のようにBlueへのRouteを削除し、エンドユーザーがGreenにしかルーティングされないようにします。<br><img style="width: 600.00px" src="img/4cb52df0d97e79dd.png"></p>
+<p>次の<code>cf unmap-route</code>コマンドを実行し、<code>hello-cf</code>アプリから元のルートをアンマップしてください。</p>
+<pre><code>$ cf unmap-route hello-cf apps.dev.example.com -n ${HOST}
+Removing route hello-cf-bold-lion-rf.apps.dev.example.com from app hello-cf in org hol / space tmaki as tmaki@pivotal.io...
+OK</code></pre>
+<p><code>cf apps</code>コマンドでアプリケーション一覧を表示し、<code>hello-cf</code>アプリにはルートがマッピングされていないことを確認してください。</p>
+<pre><code>$ cf apps
+Getting apps in org hol / space tmaki as tmaki@pivotal.io...
+OK
+
+name             requested state   instances   memory   disk   urls
+hello-cf         started           1/1         768M     1G
+hello-cf-green   started           1/1         768M     1G     hello-cf-bold-lion-rf.apps.dev.example.com, hello-cf-green-hilarious-rabbit-nz.apps.dev.example.com</code></pre>
+<p><br>元々BlueにマッピングされていたURLに何度かアクセスしてください。全て新バージョンが返ります。</p>
+<pre><code>$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.3
+$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.3
+$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.3
+$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.3</code></pre>
+<p><br>リクエストの100%がGreenにルーティングされても問題ないことを確認したら、Blueは停止または削除します。素早い切り戻し[1]をしたい場合は停止にしてください。またGreenにマップされている新しいルートは不要なので削除します。</p>
+<p class="image-container"><img style="width: 600.00px" src="img/d394a3cf23860bb.png"></p>
+<p>次のコマンドを実行してください。</p>
+<pre><code># 過去のBlueがいたら削除
+cf delete -f hello-cf-blue
+
+# 切り戻しできるようにhello-cfをhello-cf-blueにリネーム
+cf rename hello-cf hello-cf-blue 
+
+# hello-cf-greenをhello-cfに昇格
+cf rename hello-cf-green hello-cf
+
+# hello-cf-blueをDelete(またはStop)
+cf delete -f hello-cf-blue
+
+# Greenにマップされている新しいルートはアンマップ
+cf unmap-route hello-cf apps.dev.example.com -n ${HOST_NEW}
+
+# アンマップされたルートを削除
+cf delete-route apps.dev.example.com -n ${HOST_NEW} -f</code></pre>
+<p><code>cf apps</code>コマンドでアプリケーション一覧を表示し、<code>hello-cf</code>アプリには元々のルートがマッピングされていることを確認してください。表示時上はGreenをデプロイする前と同じです。</p>
+<pre><code>$ cf apps
+Getting apps in org hol / space tmaki as tmaki@pivotal.io...
+OK
+
+name            requested state   instances   memory   disk   urls
+hello-cf        started           1/1         768M     1G     hello-cf-bold-lion-rf.apps.dev.example.com</code></pre>
+<aside class="special"><p>Note: 上記の手順は<a href="https://docs.cloudfoundry.org/devguide/deploy-apps/blue-green.html" target="_blank">ドキュメント</a>に記載された通りのやり方ですが、次の手順でデプロイする方がStepが少なく済みます。</p>
+<ol type="1" start="1">
+<li>旧アプリの名前をrename。ここではsuffixに&#34;<code>-venerable</code>&#34;をつける。<br><code>cf rename hello-cf hello-cf-venerable</code></li>
+<li>新アプリを旧アプリのの元の名前でデプロイ<br><code>cf push</code></li>
+<li>新アプリに元のRouteをマッピング (<code>random-route: true</code>の場合のみ)<br><code>cf map-route hello-cf apps.dev.example.com -n ${HOST}</code> </li>
+<li>旧アプリを削除または停止<br><code>cf delete -f hello-cf-venerable</code></li>
+</ol>
+</aside>
+<h2 is-upgraded>Rolling Update</h2>
+<p>CF CLI v7から、Rolling Updateがサポートされました。Blue-Green Updateとは異なり、旧版から新版へ一気にアップデートします。ただし複数インスタンスが存在する場合は、1インスタンスずつ順次アップデートされていくので、余剰なリソースは1インスタンスだけです。<br><br>まずは<code>cf scale</code>コマンドで<code>hello-cf</code>アプリを3インスタンスにスケールアウトします。</p>
+<pre><code>cf scale hello-cf -i 3</code></pre>
+<p><br>次に新版をデプロイします。ここでもアプリケーションのソースコードは変更せず、環境変数<code>INFO_VERSION</code>のみ変更します。<br><code>manifest.yml</code>を次のように変更してください。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 3 # ⭐️
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  services:
+  - hello
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    INFO_VERSION: 0.0.4 # ⭐️
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    API_KEY: ${vcap.services.hello.credentials.api-key}</code></pre>
+<p><br>ここから<code>cf7</code>コマンドを使用します。<code>cf7</code>コマンドのバージョンを確認してください。</p>
+<pre><code>$ cf7 version                                        
+cf7 version 7.0.1+fb3f929c2.2020-06-24</code></pre>
+<p><br>cf7コマンドで再度ログインしてください。</p>
+<pre><code>cf7 login -a api.sys.dev.example.com -o hol --sso</code></pre>
+<p><code>cf7 push</code>コマンドでRolling Updateを行うために<code>--strategy rolling</code>オプションを加えてください。</p>
+<pre><code>cf7 push --strategy rolling</code></pre>
+<p><br>別のターミナルを開いて次のコマンドを実行しておくと、順次アップデートされていく様子を確認できます。</p>
+<pre><code>watch cf7 app hello-cf
+
+# または
+
+while true;do cf7 app hello-cf;sleep 1;done</code></pre>
+<p><br>Infoエンドポイントにアクセスして稼働しているアプリケーションのバージョンを確認してください。</p>
+<pre><code>$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.4</code></pre>
+<p><br>次のコマンドでアプリケーションのRestartもRolling Updateで実施できます。</p>
+<pre><code>cf7 restart --strategy rolling hello-cf</code></pre>
+<p><code>manifest.yml</code>の変更を反映したいだけであれば<code>cf7 push</code>を実行しなくても次のコマンドだけで適用できます。(<code>cf7 push</code>よりも速いです。)<br></p>
+<pre><code>cf7 apply-manifest
+cf7 restart --strategy rolling hello-cf</code></pre>
+<aside class="warning"><p>Note: Tanzu Application Service (Pivotal Application Service) 2.8では、cf7 CLIのいくつかのコマンドが使用できません。</p>
+<ul>
+<li><code>cf7 apps</code></li>
+<li><code>cf7 marketplace</code></li>
+<li><code>cf7 login</code> (cf CLI 7.0.2の場合)</li>
+</ul>
+<p>など。</p>
+<p>2.10で<code>cf7</code>が正式に利用可能になります。</p>
+</aside>
+<h2 is-upgraded><br><br>Revision</h2>
+<p>Blue-Green Updateによって旧バージョンへ切り戻しができることを学びましたが、Tanzu Application Serviceのアプリケーションには<a href="https://docs.cloudfoundry.org/devguide/revisions.html" target="_blank">Revision</a>という仕組みが用意され、アプリケーションの情報を世代管理できます。Revisionの仕組みを使って簡単に旧バージョンへ切り戻す(Rollback)ことができます。</p>
+<p>Tanzu Application Service (Pivotal Application Service) 2.8ではデフォルトでアプリケーションのRevisionが有効になっていません。Revisionを有効にするにはApps Managerの左のメニューの&#34;Revisions&#34;をクリックし、&#34;ENABE REVISIONS&#34;ボタンをクリックしてください。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/2d815fbea5e3b283.png"></p>
+<aside class="special"><p>Note: Tanzu Application Service 2.9からデフォルトでRevisionが有効になります。</p>
+</aside>
+<p>このページにRevision一覧が表示されますが、有効化直後は何も表示されません。</p>
+<p><img style="width: 601.70px" src="img/bb80d073eb4e269c.png"><br>Revisionの有効化は次のコマンドでも行えます。</p>
+<pre><code>cf7 curl /v3/apps/$(cf7 app hello-cf --guid)/features/revisions -X PATCH -d &#34;{\&#34;enabled\&#34;: true}&#34;</code></pre>
+<p>最初のRevisionを作成するために、<code>cf7 push</code>してください。</p>
+<pre><code>cf7 push</code></pre>
+<p><br>Apps ManagerでRevisionsを確認してください。Revision 1が作成されていることがわかります。Revisionに紐づく環境変数を見ることもできます。<img style="width: 601.70px" src="img/af564bbdfde2a34f.png"></p>
+<p>次に環境変数<code>INFO_VERSION</code>を変更します。<code>manifest.yml</code>を次のように変更してください。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 3
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  services:
+  - hello
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    INFO_VERSION: 0.0.4+r # ⭐️
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    API_KEY: ${vcap.services.hello.credentials.api-key}</code></pre>
+<p><code>cf7 push</code>でRolling Updateしてください。</p>
+<pre><code>cf7 push --strategy rolling</code></pre>
+<p><br>Infoエンドポイントにアクセスして稼働しているアプリケーションのバージョンを確認してください。</p>
+<pre><code>$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.4+r</code></pre>
+<p><br>Apps Manager上でRevision 2が作成され、新しい環境変数が設定されていることを確認してください。<br><br><img style="width: 601.70px" src="img/eb1e906ef726f556.png"></p>
+<p><br>次に、Revision 1を開き、&#34;REDEPLOY&#34;ボタンをクリックしてください。<br><img style="width: 601.70px" src="img/67822fb4133ea86c.png"><br><br>Revision 1にRollbackしています。Rollback後は新たにRevision 3として扱われます。<br><br><img style="width: 601.70px" src="img/224587ed16d13653.png"></p>
+<p>Revision 3がRevision 1と同じ環境変数になっていることを確認してください。<br><img style="width: 601.70px" src="img/c55faf8c0905423b.png"><br></p>
+<p>Infoエンドポイントにアクセスして、アプリケーションのバージョンがRollbackされていることを確認してください。</p>
+<pre><code>$ curl -s https://${HOST}.apps.dev.example.com/actuator/info | jq -r .version
+0.0.4</code></pre>
+<h2 is-upgraded><br></h2>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Service BrokerでPostgreSQLサービスを作成してアクセス" duration="90">
+        <p>アプリケーションが使用するデータベースのインスタンスを自動で払い出すためにService Brokerを使用します。<br>Hands-on Lab用の環境にはPostgreSQL as a Serviceである<a href="https://www.elephantsql.com" target="_blank">ElaphantSQL</a>のインスタンスを作成してくれる<a href="https://github.com/making/elephantsql-service-broker" target="_blank">Elephant SQL Service Broker</a>[2]がインストールされています。これを使用することで<code>cf</code>コマンドだけで専用のデータベースを作成できます。</p>
+<h2 is-upgraded><br>アプリケーションの変更</h2>
+<p>まずはアプリケーションを変更してPostgreSQLにアクセスするようにします。hello-cfディレクトリの下の<code>pom.xml</code>の<code>&lt;dependencies&gt;</code>内に次の3つの<code>&lt;deppendency&gt;</code>を追加してください。</p>
+<pre><code>    &lt;dependency&gt;
+      &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-boot-starter-jdbc&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.flywaydb&lt;/groupId&gt;
+      &lt;artifactId&gt;flyway-core&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.postgresql&lt;/groupId&gt;
+      &lt;artifactId&gt;postgresql&lt;/artifactId&gt;
+      &lt;scope&gt;runtime&lt;/scope&gt;
+    &lt;/dependency&gt;</code></pre>
+<p><code>src/main/java/com/example/CarController.java</code>を作成し、次の内容を記述してください。</p>
+<pre><code>package com.example;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.sql.PreparedStatement;
+import java.util.List;
+
+@RestController
+public class CarController {
+
+    private final JdbcTemplate jdbcTemplate;
+
+    public CarController(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @GetMapping(path = &#34;/cars&#34;)
+    public ResponseEntity&lt;?&gt; getCars() {
+        final List&lt;Car&gt; cars = this.jdbcTemplate.query(&#34;SELECT id, name FROM car ORDER BY id&#34;, (rs, i) -&gt; new Car(rs.getInt(&#34;id&#34;), rs.getString(&#34;name&#34;)));
+        return ResponseEntity.ok(cars);
+    }
+
+    @PostMapping(path = &#34;/cars&#34;)
+    public ResponseEntity&lt;?&gt; postCars(@RequestBody Car car) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        this.jdbcTemplate.update(connection -&gt; {
+            final PreparedStatement statement = connection.prepareStatement(&#34;INSERT INTO car(name) VALUES (?)&#34;, new String[]{&#34;id&#34;});
+            statement.setString(1, car.getName());
+            return statement;
+        }, keyHolder);
+        car.setId(keyHolder.getKey().intValue());
+        return ResponseEntity.status(HttpStatus.CREATED).body(car);
+    }
+
+    @DeleteMapping(path = &#34;/cars/{id}&#34;)
+    public ResponseEntity&lt;?&gt; deleteCar(@PathVariable(&#34;id&#34;) Integer id) {
+        this.jdbcTemplate.update(&#34;DELETE FROM car WHERE id = ?&#34;, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    static class Car {
+
+        public Car(Integer id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        private Integer id;
+
+        private String name;
+
+        public Integer getId() {
+            return id;
+        }
+
+        public void setId(Integer id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+}</code></pre>
+<p><code>src/main/resources/db/migration/V1__init.sql</code>を作成し、次の内容を記述してください。なお、<code>src/main/resources/db/migration</code>ディレクトリは存在していないので、新規作成してください。</p>
+<pre><code>CREATE TABLE car (
+    id   SERIAL PRIMARY KEY,
+    name VARCHAR(16)
+);
+
+INSERT INTO car(name) VALUES (&#39;Avalon&#39;);
+INSERT INTO car(name) VALUES (&#39;Corolla&#39;);
+INSERT INTO car(name) VALUES (&#39;Crown&#39;);
+INSERT INTO car(name) VALUES (&#39;Levin&#39;);
+INSERT INTO car(name) VALUES (&#39;Yaris&#39;);
+INSERT INTO car(name) VALUES (&#39;Vios&#39;);
+INSERT INTO car(name) VALUES (&#39;Glanza&#39;);
+INSERT INTO car(name) VALUES (&#39;Aygo&#39;);</code></pre>
+<p><code>src/main/resources/application.properties</code>に次の内容を記述してください。</p>
+<pre><code>spring.datasource.driver-class-name=org.postgresql.Driver
+# Local用のダミー設定
+spring.datasource.url=jdbc:postgresql://localhost:5432/car
+spring.datasource.username=${USER}
+spring.datasource.password=</code></pre>
+<p><br>アプリケーションをビルドしてください。</p>
+<pre><code>./mvnw clean package -Dmaven.test.skip=true</code></pre>
+<h2 is-upgraded>サービスインスタンスの作成</h2>
+<p>Service Brokerで作成されるリソースの単位をサービスインスタンスといいます。<code>cf create-service</code>コマンドでサービスインスタンスを作成できます。次のコマンドでElephantSQLのサービスインスタンスを作成してください。<br></p>
+<pre><code>cf7 create-service elephantsql turtle car-db</code></pre>
+<h2 is-upgraded>アプリケーションのデプロイ</h2>
+<p><code>manifest.yml</code>の<code>services</code>にサービスインスタンス名を指定し、アプリケーションのサービスインスタンスをバインドします。<code>manifest.yml</code>を次のように変更してください。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1 # ⭐️
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  services:
+  - hello
+  - car-db # ⭐️
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: info,health,env,prometheus
+    INFO_VERSION: 0.0.5 # ⭐️
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    API_KEY: ${vcap.services.hello.credentials.api-key}</code></pre>
+<p><br>アプリケーションをpushしてください。</p>
+<pre><code>cf7 push --strategy rolling</code></pre>
+<p><code>hello-cf</code>アプリにバインドされているサービスインスタンスはApps Managerから確認できます。左のメニューの&#34;Services&#34;をクリックして確認してください。</p>
+<p><img style="width: 601.70px" src="img/57f13d3ab3ce055f.png"><br><br>デプロイしたアプリにアクセスします。</p>
+<pre><code>$ curl -s https://${HOST}.apps.dev.example.com/cars | jq .
+[
+  {
+    &#34;id&#34;: 1,
+    &#34;name&#34;: &#34;Avalon&#34;
+  },
+  {
+    &#34;id&#34;: 2,
+    &#34;name&#34;: &#34;Corolla&#34;
+  },
+  {
+    &#34;id&#34;: 3,
+    &#34;name&#34;: &#34;Crown&#34;
+  },
+  {
+    &#34;id&#34;: 4,
+    &#34;name&#34;: &#34;Levin&#34;
+  },
+  {
+    &#34;id&#34;: 5,
+    &#34;name&#34;: &#34;Yaris&#34;
+  },
+  {
+    &#34;id&#34;: 6,
+    &#34;name&#34;: &#34;Vios&#34;
+  },
+  {
+    &#34;id&#34;: 7,
+    &#34;name&#34;: &#34;Glanza&#34;
+  },
+  {
+    &#34;id&#34;: 8,
+    &#34;name&#34;: &#34;Aygo&#34;
+  }
+]
+
+$ curl -s https://${HOST}.apps.dev.example.com/cars -d &#34;{\&#34;name\&#34;: \&#34;Lexus\&#34;}&#34; -H &#34;Content-Type: application/json&#34; | jq .
+{
+  &#34;id&#34;: 9,
+  &#34;name&#34;: &#34;Lexus&#34;
+}
+
+$ curl -s https://${HOST}.apps.dev.example.com/cars | jq .
+[
+  {
+    &#34;id&#34;: 1,
+    &#34;name&#34;: &#34;Avalon&#34;
+  },
+  {
+    &#34;id&#34;: 2,
+    &#34;name&#34;: &#34;Corolla&#34;
+  },
+  {
+    &#34;id&#34;: 3,
+    &#34;name&#34;: &#34;Crown&#34;
+  },
+  {
+    &#34;id&#34;: 4,
+    &#34;name&#34;: &#34;Levin&#34;
+  },
+  {
+    &#34;id&#34;: 5,
+    &#34;name&#34;: &#34;Yaris&#34;
+  },
+  {
+    &#34;id&#34;: 6,
+    &#34;name&#34;: &#34;Vios&#34;
+  },
+  {
+    &#34;id&#34;: 7,
+    &#34;name&#34;: &#34;Glanza&#34;
+  },
+  {
+    &#34;id&#34;: 8,
+    &#34;name&#34;: &#34;Aygo&#34;
+  },
+  {
+    &#34;id&#34;: 9,
+    &#34;name&#34;: &#34;Lexus&#34;
+  }
+]</code></pre>
+<p><code>cf env</code>コマンドでサービスインスタンスから渡されるデータベースの接続情報を確認します。</p>
+<pre><code>$ cf7 env hello-cf
+Getting env variables for app hello-cf in org hol / space tmaki as tmaki@pivotal.io...
+System-Provided:
+VCAP_SERVICES: {
+... (略) ...
+ &#34;elephantsql&#34;: [
+  {
+   &#34;binding_name&#34;: null,
+   &#34;credentials&#34;: {
+    &#34;hostname&#34;: &#34;satao.db.elephantsql.com&#34;,
+    &#34;jdbcUrl&#34;: &#34;jdbc:postgresql://satao.db.elephantsql.com:5432/fxwhicct?user=fxwhicct\u0026password=ahgpepaephpoahpeoaf00gahphapefa&#34;,
+    &#34;name&#34;: &#34;fxwhicct&#34;,
+    &#34;password&#34;: &#34;ahgpepaephpoahpeoaf00gahphapefa&#34;,
+    &#34;port&#34;: 5432,
+    &#34;uri&#34;: &#34;postgres://fxwhicct:ahgpepaephpoahpeoaf00gahphapefa@satao.db.elephantsql.com:5432/fxwhicct&#34;,
+    &#34;username&#34;: &#34;fxwhicct&#34;
+   },
+   &#34;instance_name&#34;: &#34;car-db&#34;,
+   &#34;label&#34;: &#34;elephantsql&#34;,
+   &#34;name&#34;: &#34;car-db&#34;,
+   &#34;plan&#34;: &#34;turtle&#34;,
+   &#34;provider&#34;: null,
+   &#34;syslog_drain_url&#34;: null,
+   &#34;tags&#34;: [
+    &#34;postgresql&#34;,
+    &#34;postgres&#34;,
+    &#34;elephantsql&#34;
+   ],
+   &#34;volume_mounts&#34;: []
+  }
+ ]
+}
+... (略) ...</code></pre>
+<p><br>アプリケーションがこの接続情報を使うのための特別な設定は行いませんでした。<code>cf push</code>の際に<strong>Java Buildpackにより</strong><a href="https://github.com/cloudfoundry/java-buildpack-auto-reconfiguration" target="_blank"><strong>Auto-Reconfiguation</strong></a><strong>というライブラリが自動で追加され</strong>、このライブラリがサービスインスタンスから渡される接続情報からJavaプログラム内でデータベースにアクセスするための<strong><code>DataSource</code></strong><strong>インスタンスを自動で作成します</strong>。そのため、設定しないくてもサービスインスタンスに接続できるうようになっています。</p>
+<p><code>cf logs</code>コマンドで次のようなメッセージが出力されていることを確認してください。</p>
+<pre><code>$ cf7 logs hello-cf --recent
+...
+   2020-07-23T17:14:28.27+0900 [APP/PROC/WEB/0] OUT 2020-07-23 08:14:28.272  INFO 13 --- [           main] o.c.reconfiguration.CloudServiceUtils    : &#39;dataSource&#39; bean of type with &#39;javax.sql.DataSource&#39; reconfigured with &#39;car-db&#39; bean
+...</code></pre>
+<p><code>car-db</code>サービスインスタンスの情報から<code>DataSource</code>インスタンスを作成したことを知らせています。</p>
+<p>また、<code>cf push</code>時のログにAuto Reconfigurationが組み込まれていることを確認できます。</p>
+<pre><code>$ cf7 push --strategy rolling
+Pushing app hello-cf to org hol / space tmaki as tmaki@pivotal.io...
+Applying manifest file /Users/toshiaki/hol/hello-cf/manifest.yml...
+Manifest applied
+Packaging files to upload...
+Uploading files...
+ 391.84 KiB / 391.84 KiB [==========================================================================================================] 100.00% 1s
+
+Waiting for API to complete processing files...
+
+Staging app and tracing logs...
+   Downloading java_buildpack_offline...
+   Downloaded java_buildpack_offline
+   Cell 116dd279-04a8-42e6-96cf-493e727bc0bd creating container for instance d45d87fc-f3dc-418c-a1de-460ff6ebb74b
+   Cell 116dd279-04a8-42e6-96cf-493e727bc0bd successfully created container for instance d45d87fc-f3dc-418c-a1de-460ff6ebb74b
+   Downloading app package...
+   Downloading build artifacts cache...
+   Downloaded build artifacts cache (129B)
+   Downloaded app package (15.8M)
+   -----&gt; Java Buildpack v4.29.1 (offline) | https://github.com/cloudfoundry/java-buildpack.git#864477c
+   -----&gt; Downloading Jvmkill Agent 1.16.0_RELEASE from https://java-buildpack.cloudfoundry.org/jvmkill/bionic/x86_64/jvmkill-1.16.0-RELEASE.so (found in cache)
+   -----&gt; Downloading Open Jdk JRE 11.0.6_10 from https://java-buildpack.cloudfoundry.org/openjdk/bionic/x86_64/openjdk-jre-11.0.6_10-bionic.tar.gz (found in cache)
+          Expanding Open Jdk JRE to .java-buildpack/open_jdk_jre (1.1s)
+          JVM DNS caching disabled in lieu of BOSH DNS caching
+   -----&gt; Downloading Open JDK Like Memory Calculator 3.13.0_RELEASE from https://java-buildpack.cloudfoundry.org/memory-calculator/bionic/x86_64/memory-calculator-3.13.0-RELEASE.tar.gz (found in cache)
+          Loaded Classes: 18722, Threads: 250
+   -----&gt; Downloading Client Certificate Mapper 1.11.0_RELEASE from https://java-buildpack.cloudfoundry.org/client-certificate-mapper/client-certificate-mapper-1.11.0-RELEASE.jar (found in cache)
+   -----&gt; Downloading Container Security Provider 1.16.0_RELEASE from https://java-buildpack.cloudfoundry.org/container-security-provider/container-security-provider-1.16.0-RELEASE.jar (found in cache)
+⭐️⭐️⭐️   -----&gt; Downloading Spring Auto Reconfiguration 2.11.0_RELEASE from https://java-buildpack.cloudfoundry.org/auto-reconfiguration/auto-reconfiguration-2.11.0-RELEASE.jar (found in cache)</code></pre>
+<h2 is-upgraded>java-cfenvライブラリの利用</h2>
+<p>一見便利なAuto-Reconfigurationですが、欠点があるためProduction環境での利用をお勧めしません。Auto-ReconfigurationはSpring Bootができる前に作られたライブラリであり、Spring Bootが提供する<code>DataSource</code>を設定するためのプロパティ(<code>spring.datasource.hikari.maximum-pool-size</code>など)を無視します。またConnection Poolの最大接続数を4と小さい値に設定します。</p>
+<p>Auto-Reconfigurationの代わりに<a href="https://github.com/pivotal-cf/java-cfenv" target="_blank">java-cfenv</a>というライブラリを使うと、サービスインスタンスの持つ接続情報をSpring Bootのプロパティ(<code>spring.datasource.url</code>など)に自動で変換するだけに留められます。これによりAuto-Reconfigurationのような自動設定の利便性を残しつつ、オーバーライドしたいプロパティはプロパティファイルや環境変数で設定できるようになります。<br>Auto-Reconfigurationを無効にし、java-cfenvを使って再デプロイしましょう。<br><br>pom.xmlに次の<code>&lt;dependency&gt;</code>を追加してください。</p>
+<pre><code>        &lt;dependency&gt;
+            &lt;groupId&gt;io.pivotal.cfenv&lt;/groupId&gt;
+            &lt;artifactId&gt;java-cfenv-boot&lt;/artifactId&gt;
+            &lt;version&gt;2.1.2.RELEASE&lt;/version&gt;
+        &lt;/dependency&gt;</code></pre>
+<p><code>manifest.yml</code>に次の環境変数を設定し、Auto-Reconfigurationを無効にします。また、環境変数<code>SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE</code>を設定し、Connection Poolの最大接続数を明示的に設定します。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  services:
+  - hello
+  - car-db
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    # ⭐️⭐️⭐️
+    JBP_CONFIG_SPRING_AUTO_RECONFIGURATION: &#39;{enabled: false}&#39;
+    SPRING_PROFILES_ACTIVE: cloud
+    SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE: 2
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: info,health,env,prometheus
+    INFO_VERSION: 0.0.6 # ⭐️
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    API_KEY: ${vcap.services.hello.credentials.api-key}</code></pre>
+<p><br>アプリケーションをビルドし、pushしてください。</p>
+<pre><code>./mvnw clean package -Dmaven.test.skip=true
+cf7 push --strategy rolling</code></pre>
+<p><code>cf push</code>時のログに<code>&#34;Downloading </code><strong><code>Spring Auto Reconfiguration</code></strong><code> 2.11.0_RELEASE from&#34;</code>が出力さていないことを確認してください。<br><br>また<code>cf logs</code>コマンドで次のようなメッセージが出力されていることを確認してください。<code>car-db</code>サービスインスタンスから<code>spring.datasource</code>プロパティが自動設定されていることを確認できます。</p>
+<pre><code>$ cf7 logs hello-cf --recent
+...
+   2020-07-23T19:03:38.80+0900 [APP/PROC/WEB/0] OUT 2020-07-23 10:03:38.809  INFO 14 --- [           main] s.b.CfDataSourceEnvironmentPostProcessor : Setting spring.datasource properties from bound service [car-db]
+...</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Oracle Databaseにアクセス" duration="15">
+        <p>(このセクションは説明のみで演習は行いません)</p>
+<p>Oracle DatabaseのようにMarketplaceにServiceが登録されてないデータベースにアクセスしたい場合は、<strong>Provision済みの情報</strong>をUser Provided ServiceまたはCredhub Service Brokerに接続情報を登録すれば良いです。</p>
+<h2 is-upgraded>Connection Type: SIDの場合</h2>
+<p>SIDで接続する場合は、次の形式であればBuildpackのAuto Reconfigurationまたはjava-cfenvが自動でSpring Bootのプロパティに設定してくれます。</p>
+<pre><code># User Provided Serviceの場合
+cf create-user-provided-service car-db -p &#39;{&#34;url&#34;:&#34;oracle://scott:tiger@oracle.example.com:1521/CARCDB&#34;}&#39;</code></pre>
+<pre><code># Credhub Service Brokerの場合
+cf create-service credhub default car-db -c &#39;{&#34;url&#34;:&#34;oracle://scott:tiger@oracle.example.com:1521/CARCDB&#34;}&#39;</code></pre>
+<p>PostgreSQLの場合と<code>manfeifest.yml</code>に変更はありません。<br></p>
+<h2 is-upgraded>Connection Type: Service Nameの場合</h2>
+<p>Service Nameで接続する場合は、Auto Reconfigurationまたはjava-cfenvが現時点(July 2020)で対応していないので、Auto Reconfigurationまたはjava-cfenvは使用しません。次の形式でServiceに接続情報を設定します。</p>
+<pre><code># User Provided Serviceの場合
+cf create-user-provided-service car-db -p &#39;{&#34;username&#34;:&#34;scott&#34;, &#34;password&#34;:&#34;tiger&#34;, &#34;jdbcUrl&#34;:&#34;jdbc:oracle:thin:@//oracle.example.com:1521/CARCDB&#34;}&#39;</code></pre>
+<pre><code># Credhub Service Brokerの場合
+cf create-service credhub default car-db -c &#39;{&#34;username&#34;:&#34;scott&#34;, &#34;password&#34;:&#34;tiger&#34;, &#34;jdbcUrl&#34;:&#34;jdbc:oracle:thin:@//oracle.example.com:1521/CARCDB&#34;}&#39;</code></pre>
+<p><code>manifest.yml</code>は次のように設定してください。<strong>また、</strong><strong><code>pom.xml</code></strong><strong>からjava-cfenvの</strong><strong><code>&lt;dependency&gt;</code></strong><strong>を削除してください。</strong></p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  services:
+  - hello
+  - car-db
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    JBP_CONFIG_SPRING_AUTO_RECONFIGURATION: &#39;{enabled: false}&#39;
+    SPRING_PROFILES_ACTIVE: cloud
+    # ⭐️⭐️⭐️
+    SPRING_DATASOURCE_USERNAME: ${vcap.services.car-db.credentials.username}
+    SPRING_DATASOURCE_PASSWORD: ${vcap.services.car-db.credentials.password}
+    SPRING_DATASOURCE_URL: ${vcap.services.car-db.credentials.jdbcUrl}
+    SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE: 2
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: info,health,env,prometheus
+    INFO_VERSION: 0.0.6
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    API_KEY: ${vcap.services.hello.credentials.api-key}</code></pre>
+<h2 is-upgraded>アプリケーションの変更</h2>
+<p>PostgreSQLではなくOracle DBを使うようにアプリケーションを以下のファイルを変更します。</p>
+<p><code>pom.xml</code></p>
+<pre><code>    &lt;dependency&gt;
+      &lt;groupId&gt;com.oracle.ojdbc&lt;/groupId&gt;
+      &lt;artifactId&gt;ojdbc8&lt;/artifactId&gt;
+      &lt;scope&gt;runtime&lt;/scope&gt;
+    &lt;/dependency&gt;
+
+&lt;!-- PostgreSQL Driverは不要
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.postgresql&lt;/groupId&gt;
+      &lt;artifactId&gt;postgresql&lt;/artifactId&gt;
+      &lt;scope&gt;runtime&lt;/scope&gt;
+    &lt;/dependency&gt;
+--&gt;
+
+&lt;!-- Connection Type: Service Nameの場合、java-cfenv-bootを除外
+        &lt;dependency&gt;
+            &lt;groupId&gt;io.pivotal.cfenv&lt;/groupId&gt;
+            &lt;artifactId&gt;java-cfenv-boot&lt;/artifactId&gt;
+            &lt;version&gt;2.1.2.RELEASE&lt;/version&gt;
+        &lt;/dependency&gt;
+--&gt;</code></pre>
+<p><code><br>src/main/resources/application.properties</code></p>
+<pre><code># Local用のダミー設定
+spring.datasource.username=scott
+spring.datasource.password=tiger
+spring.datasource.url=jdbc:oracle:thin:@localhost:1521:orcl
+spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
+
+# 対象のスキーマが空でない場合は、現状をversion 0としてDBマイグレーション管理する
+spring.flyway.baseline-on-migrate=true
+spring.flyway.baseline-version=0
+spring.flyway.baseline-description=Reset baseline</code></pre>
+<p><code><br>src/main/resources/db/migration/V1__init.sql</code></p>
+<pre><code>CREATE TABLE car (
+    id   NUMBER GENERATED ALWAYS AS IDENTITY,
+    name VARCHAR2(16)
+);
+
+INSERT INTO car(name) VALUES (&#39;Avalon&#39;);
+INSERT INTO car(name) VALUES (&#39;Corolla&#39;);
+INSERT INTO car(name) VALUES (&#39;Crown&#39;);
+INSERT INTO car(name) VALUES (&#39;Levin&#39;);
+INSERT INTO car(name) VALUES (&#39;Yaris&#39;);
+INSERT INTO car(name) VALUES (&#39;Vios&#39;);
+INSERT INTO car(name) VALUES (&#39;Glanza&#39;);
+INSERT INTO car(name) VALUES (&#39;Aygo&#39;);</code></pre>
+<p><br>アプリケーションをビルドし、pushしてください。</p>
+<pre><code>./mvnw clean package -Dmaven.test.skip=true
+cf7 push --strategy rolling</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Metric Registrarを使ったメトリクス収集" duration="90">
+        <p>アプリケーションのメトリクスを収集します。Tanzu Application Serviceにデプロイされたアプリケーションにし対して、<a href="https://docs.pivotal.io/platform/application-service/2-9/metric-registrar/index.html" target="_blank">Metric Registrar</a>を使ってメトリクスを取得し、Platformに転送することができます。アプリケーションが<a href="https://prometheus.io" target="_blank">Prometheus</a>形式のメトリクスを返すHTTPエンドポイントを持っている場合、そのエンドポイントを登録することで、Metric Registrarは定期的にそのエンドポイントにアクセスしメトリクスを取得します。<br>Metrics RegistrarによってPlatformに転送されたメトリクスは、前述のApp MetricsやGrafanaで視覚化できます。</p>
+<h2 is-upgraded>Metric RegistrarでPrometheusエンドポイントを登録</h2>
+<p>既に<code>hello-cf</code>アプリはSpring Boot Actuatorのエンドポイントの一つとしてPrometheusエンドポイントを公開してきました。もう一度アクセスしてください。<br></p>
+<pre><code>curl -s https://${HOST}.apps.dev.example.com/actuator/prometheus</code></pre>
+<p>Metics Regisrarがアクセスする、アプリケーションのPrometheusエンドポイントを指定するために<a href="https://github.com/pivotal-cf/metric-registrar-cli" target="_blank">Metrics Registrar Plugin</a>が利用できます。次のコマンドでプラグインをインストールしてください。<br></p>
+<pre><code>$ cf7 install-plugin -r CF-Community &#34;metric-registrar&#34;
+Searching CF-Community for plugin metric-registrar...
+Plugin metric-registrar 1.3.0 found in: CF-Community
+Plugin metric-registrar 1.3.0 is already installed.
+Attention: Plugins are binaries written by potentially untrusted authors.
+Install and use plugins at your own risk.
+Do you want to uninstall the existing plugin and install metric-registrar 1.3.0? [yN]: y
+Starting download of plugin binary from repository CF-Community...
+ 9.88 MiB / 9.88 MiB [==============================================================================================================] 100.00% 1s
+Installing plugin metric-registrar...
+OK
+
+Plugin metric-registrar 1.3.0 successfully installed.</code></pre>
+<p><code>cf register-metrics-endpoint</code>コマンドでPrometheusエンドポイントを指定します。<br></p>
+<pre><code>cf7 register-metrics-endpoint hello-cf /actuator/prometheus</code></pre>
+<p>このコマンドは実際には<code>metrics-endpoint-actuator-prometheus</code>という名前のUser Provided Serviceのサービスインスタンスを作成し、<code>hello-cf</code>アプリにバインドするということを行っています。<code>cf services</code>コマンドでサービスインスタンスが作成とバインドされていることを確認してください。</p>
+<pre><code>$ cf7 services
+Getting services in org hol / space tmaki as tmaki@pivotal.io...
+
+name                                   service         plan      bound apps   last operation     broker           upgrade available
+car-db                                 elephantsql     turtle    hello-cf     create succeeded   elephantsql      
+hello                                  credhub         default   hello-cf     create succeeded   credhub-broker   
+⭐️⭐️⭐️metrics-endpoint-actuator-prometheus   user-provided             hello-cf  </code></pre>
+<p>実際には次のコマンドと同じです。Metrics Registrar Pluginをインストールしたくない場合は、こちらの方法を使用できます。<br></p>
+<pre><code>cf7 create-user-provided-service metrics-endpoint-actuator-prometheus -l metrics-endpoint:///actuator/prometheus
+cf7 bind-service hello-cf metrics-endpoint-actuator-prometheus</code></pre>
+<p><code>metrics-endpoint-actuator-prometheus</code>サービスインスタンスが継続してバインドされるように<code>manifest.yml</code>の<code>services</code>に<code>metrics-endpoint-actuator-prometheus</code>を追加してください。pushはしなくても良いです。</p>
+<pre><code>  services:
+  - hello
+  - car-db
+  - metrics-endpoint-actuator-prometheus # ⭐️⭐️⭐️</code></pre>
+<aside class="special"><p>Note: Metrics Registrar Pluginで作成されるサービスインスタンス名の命名規約は&#34;<code>metrics-endpoint-&lt;エンドポイントの</code>パス名の/を-に置換した文字列&gt;&#34;です。アプリケーション単位に作成されるわけではなく、エンドポイントのパス単位で作成されます。</p>
+</aside>
+<p><br>Metrics Registrarが登録したエンドポイントにアクセスしているかを<code>cf logs</code>コマンドで確認します。<code>/actuator/prometheu</code>sに対する、<code>Go-http-client/1.1</code>というUser-Agentのリクエストを確認してください。</p>
+<pre><code>$ cf7 logs hello-cf --recent
+...
+   2020-07-24T02:12:49.38+0900 [RTR/0] OUT hello-cf-chatty-platypus.apps.dev.example.com - [2020-07-23T17:12:49.374573051Z] &#34;GET /actuator/prometheus HTTP/1.1&#34; 200 0 11804 &#34;-&#34; &#34;Go-http-client/1.1&#34; &#34;172.19.0.50:59578&#34; &#34;172.19.0.48:61038&#34; x_forwarded_for:&#34;172.19.0.50&#34; x_forwarded_proto:&#34;https&#34; vcap_request_id:&#34;e052006c-95ee-4f1e-455b-653adc025895&#34; response_time:0.007357 gorouter_time:0.000259 app_id:&#34;3869fd37-56c7-4586-928f-7105ddcb3e64&#34; app_index:&#34;0&#34; x_b3_traceid:&#34;b161fdfa90cb0075&#34; x_b3_spanid:&#34;b161fdfa90cb0075&#34; x_b3_parentspanid:&#34;-&#34; b3:&#34;b161fdfa90cb0075-b161fdfa90cb0075&#34;
+   2020-07-24T02:12:49.38+0900 [RTR/0] OUT
+
+...</code></pre>
+<p>Metrics Registart経由でPlatformに流れるメトリクスを確認するために、次のコマンドで<a href="https://github.com/cloudfoundry/log-cache-cli" target="_blank">Log Cache Plugin</a>が利用できます。次のコマンドでプラグインをインストールしてください。<br></p>
+<pre><code>$ cf7 install-plugin -r CF-Community &#34;log-cache&#34;  
+
+Searching CF-Community for plugin log-cache...
+Plugin log-cache 2.1.0 found in: CF-Community
+Attention: Plugins are binaries written by potentially untrusted authors.
+Install and use plugins at your own risk.
+Do you want to install the plugin log-cache? [yN]: y
+Starting download of plugin binary from repository CF-Community...
+ 12.49 MiB / 12.49 MiB [============================================================================================================] 100.00% 2s
+Installing plugin log-cache...
+OK
+
+Plugin log-cache 2.1.0 successfully installed.</code></pre>
+<p><code>cf tail</code>コマンドで流れるメトリクスを追跡できます。<code>jvm_memory_max_bytes</code>などが出力されていればSpring Boot Actuatorのメトリクスが取得できています。<br></p>
+<pre><code>$ cf7 tail --envelope-class=metrics hello-cf -f
+Retrieving logs for app hello-cf in org hol / space tmaki as tmaki@pivotal.io...
+
+   2020-07-24T02:23:54.37+0900 [hello-cf/0] GAUGE jvm_memory_max_bytes:5832704.000000 
+   2020-07-24T02:23:54.37+0900 [hello-cf/0] GAUGE jvm_memory_max_bytes:5111808.000000 
+   2020-07-24T02:23:54.37+0900 [hello-cf/0] GAUGE jvm_memory_max_bytes:117817344.000000 
+   2020-07-24T02:23:54.37+0900 [hello-cf/0] GAUGE jvm_memory_max_bytes:122912768.000000 
+   2020-07-24T02:23:54.37+0900 [hello-cf/0] GAUGE hikaricp_connections_creation_seconds_max:0.000000 
+   2020-07-24T02:23:54.37+0900 [hello-cf/0] GAUGE tomcat_sessions_active_max_sessions:0.000000 
+   2020-07-24T02:23:54.37+0900 [hello-cf/0] GAUGE hikaricp_connections_min:5.000000 
+   2020-07-24T02:23:54.37+0900 [hello-cf/0] COUNTER tomcat_sessions_expired_sessions_total:0
+   2020-07-24T02:23:54.37+0900 [hello-cf/0] GAUGE jvm_buffer_total_capacity_bytes:0.000000 
+   2020-07-24T02:23:54.37+0900 [hello-cf/0] GAUGE jvm_buffer_total_capacity_bytes:81920.000000 
+   2020-07-24T02:23:58.47+0900 [hello-cf/0] GAUGE cpu:0.334983 percentage disk:153645056.000000 bytes disk_quota:2126941871.000000 bytes memory:217696174.000000 bytes memory_quota:805306368.000000 bytes
+   2020-07-24T02:23:58.47+0900 [hello-cf/0] GAUGE absolute_entitlement:3007833322610.000000 nanoseconds absolute_usage:95207805940.000000 nanoseconds container_age:26424755687046.000000 nanoseconds
+   2020-07-24T02:23:58.47+0900 [hello-cf/0] GAUGE spike_end:1595498742.000000 seconds spike_start:1595498622.000000 seconds</code></pre>
+<p>Metrics Registrarのエンドポイントの登録、および確認はApps Managerからも行えます。左のメニューの&#34;Settings&#34;をクリックし、&#34;Metric Registrar&#34;を確認してください。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/80b8e1908b9bb08d.png"></p>
+<h2 is-upgraded><br>App Metricsでメトリクスを確認</h2>
+<p>Metrics Registrarで登録したメトリクスをApp Metricsで確認します。App Metricsは任意のメトリクスを表示するグラフを追加することできます。App MetricsはUAAによる認可制御が行われるため、自分の管理するアプリケーションのメトリクスのみ見ることができます。<br><a href="https://docs.pivotal.io/app-metrics/2-0/using.html" target="_blank">https://docs.pivotal.io/app-metrics/2-0/using.html</a><br>Spring Boot Actuatorで取得できる一部のメトリクスを表示するためのグラフを追加します。</p>
+<p><a href="https://gist.githubusercontent.com/making/636920436c42c82706420ec830856dc4/raw/170528ccbd14fcd35482436ca13bf8afabd36851/demo.yml" target="_blank">こちら</a>のYAMLファイルをダウンロードして、<code>demo.yml</code>という名前で保存してください。次のコマンドでグラフを追加できます。<code>demo.yml</code>を開き、次の箇所を自分のOrg,Space,Appに変更してください。<br></p>
+<pre><code>spec:
+  product:
+    name: demo,demo,demo-micrometer</code></pre>
+<p>↓</p>
+<pre><code>spec:
+  product:
+    name: hol,tmaki,hello-cf</code></pre>
+<p>変更したら、次のコマンドでグラフを登録してください。<br></p>
+<pre><code>curl -sv https://metrics.sys.dev.example.com/indicator-documents -H &#34;Authorization: $(cf7 oauth-token)&#34; --data-binary @demo.yml</code></pre>
+<p>App Metricsにアクセスして、グラフが追加されていることを確認してください。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/1691e2baa584a4ec.png"></p>
+<h2 is-upgraded>Grafanaでメトリクスを確認</h2>
+<p>Platform Engineerの観点からPlatformに流れる全てのメトリクスをまとめてみたいという場合、<a href="https://docs.pivotal.io/platform/healthwatch/2-0/index.html" target="_blank">Healthwatch2</a>のGrafanaが利用できます。</p>
+<p>GrafanaでSpring Boot Actuatorのメトリクスを見たい場合は、メトリクスのTagとしてアプリの識別子を明示的に追加すると便利です。デフォルトではアプリケーションのGUIDで識別されますが、GUIDだけではどのアプリのメトリクスなのかを判別しづらいです。<br>Spring Boot Actuatorでは<code>management.metrics.tags.XXXX</code>というプロパティで任意のTagを追加することできます。<code>manifest.yml</code>に次の環境変数を追加し、TagとしてOrg名、Space名、App名、Indexを付与します。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 768m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  services:
+  - hello
+  - car-db
+  - metrics-endpoint-actuator-prometheus
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;
+    JBP_CONFIG_SPRING_AUTO_RECONFIGURATION: &#39;{enabled: false}&#39;
+    SPRING_PROFILES_ACTIVE: cloud
+    SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE: 2
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: info,health,env,prometheus
+    # ⭐️⭐️⭐️
+    MANAGEMENT_METRICS_TAGS_ORGANIZATION: ${vcap.application.organization_name}
+    MANAGEMENT_METRICS_TAGS_SPACE: ${vcap.application.space_name}
+    MANAGEMENT_METRICS_TAGS_APPLICATION: ${vcap.application.application_name}
+    MANAGEMENT_METRICS_TAGS_INSTANCE_ID: ${management.metrics.tags.application}:${vcap.application.instance_index}
+    INFO_VERSION: 0.0.7 # ⭐️
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    API_KEY: ${vcap.services.hello.credentials.api-key}</code></pre>
+<p>pushして設定を反映してください。<br></p>
+<pre><code>cf7 push --strategy rolling</code></pre>
+<p>Healthwatch2のGrafanaにアクセスして、Spring BootのDashboard[3]を確認してください。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/473686de5b037c1.png"></p>
+<h2 is-upgraded>メモリの節約</h2>
+<p>App MetricsあるいはGrafanaでhello-cfのメトリクスを見るとメモリの使用率があまり高くないことがわかります。768MBのメモリを割り当てましたが、このアプリケーションではもっと少なくても大丈夫そうです。<br>Javaのアプリケーションへのメモリ割り当てはJava Buildpackに含まれる<a href="https://github.com/cloudfoundry/java-buildpack-memory-calculator/tree/v3.13.0.RELEASE" target="_blank">Memory Calculator</a>よって次の図のように自動で決まります。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/a00e6f9fa2cc1956.png"></p>
+<p>固定値として確保されているReserved Code Cacheの240MBと、Thread Stackの250MB (1スレッドあたり1MB x 250スレッド)の割合が多く、ここを小さくすれば768MBから大きく減らせることがわかります。<br>ここではReserved Code Cacheを32MB、Thread Stackを10MB (1スレッドあたり512KB x 20スレッド)に変更し、コンテナのメモリサイズを256MBまで小さくしてみましょう。<br>なお、想定スレッド数を20に減らすにあたり、アプリケーションサーバー(Tomcat)がこれより多くのスレッドを作成しないように、<code>servcer.tomcat.threads.max</code>プロパティでスレッドの上限値を設定しておきます。<br></p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 256m # ⭐️⭐️⭐️
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  services:
+  - hello
+  - car-db
+  - metrics-endpoint-actuator-prometheus
+  env:
+    JAVA_OPTS: -XX:ReservedCodeCacheSize=32M -Xss512k # ⭐️⭐️⭐️
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{memory_calculator: {stack_threads: 20}, jre: {version: 11.+}}&#39; # ⭐️⭐️⭐️
+    JBP_CONFIG_SPRING_AUTO_RECONFIGURATION: &#39;{enabled: false}&#39;
+    SPRING_PROFILES_ACTIVE: cloud
+    SERVER_TOMCAT_THREADS_MAX: 4 # ⭐️⭐️⭐️
+    SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE: 2
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: info,health,env,prometheus
+    MANAGEMENT_METRICS_TAGS_ORGANIZATION: ${vcap.application.organization_name}
+    MANAGEMENT_METRICS_TAGS_SPACE: ${vcap.application.space_name}
+    MANAGEMENT_METRICS_TAGS_APPLICATION: ${vcap.application.application_name}
+    MANAGEMENT_METRICS_TAGS_INSTANCE_ID: ${management.metrics.tags.application}:${vcap.application.instance_index}
+    INFO_VERSION: 0.0.8 # ⭐️
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    API_KEY: ${vcap.services.hello.credentials.api-key}</code></pre>
+<p>pushして設定を反映してください。</p>
+<pre><code>cf7 push --strategy rolling</code></pre>
+<h2 is-upgraded>カスタムメトリクスの作成</h2>
+<p>ここまでみてきたメトリクスはコンテナレベルであったり、JVMやHTTPレベルであったりとシステム観点でのメトリクスでした。ビジネス観点でのメトリクスを取得したい場合は、アプリケーションで実装する必要があります。実装にはSpring Boot Actuatorの内部で使用されている<a href="https://micrometer.io/" target="_blank">Micrometer</a>を使用します。</p>
+<p>Micrometerでは主に次の3つのMetrics Typeを使用します[4]。</p>
+<ul>
+<li><a href="https://micrometer.io/docs/concepts#_gauges" target="_blank">Gauge</a> ... 増減する値の現在値を示します (例: 速度計)</li>
+<li><a href="https://micrometer.io/docs/concepts#_counters" target="_blank">Counter</a> ... 増加する値の現在値[5]を示します (例: 万歩計)</li>
+<li><a href="https://micrometer.io/docs/concepts#_timers" target="_blank">Timer</a> ... ある処理の実行回数および処理時間の合計[6]を示します (例: レスポンスタイム)</li>
+</ul>
+<p>ここではGaugeとCounterを使った簡単なサンプルを試します。</p>
+<p><code>src/main/java/com/example/DemoMetricsController.java</code>を作成し、次の内容を記述してください。</p>
+<pre><code>package com.example;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+import io.micrometer.core.instrument.MeterRegistry;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class DemoMetricsController {
+        private final MeterRegistry meterRegistry;
+
+        private final AtomicLong gauge = new AtomicLong(0L);
+
+        public DemoMetricsController(MeterRegistry meterRegistry) {
+                this.meterRegistry = meterRegistry;
+        }
+
+        @GetMapping(&#34;/demo_gauge&#34;)
+        public ResponseEntity&lt;String&gt; customMetric(@RequestParam(value = &#34;delta&#34;, defaultValue = &#34;1&#34;) long delta) {
+                final AtomicLong demoGauge = this.meterRegistry.gauge(&#34;demo.gauge&#34;, this.gauge);
+                demoGauge.addAndGet(delta);
+                return ResponseEntity.ok(&#34;Gauge&#34;);
+        }
+
+        @GetMapping(&#34;/demo_counter&#34;)
+        public ResponseEntity&lt;String&gt; simple() {
+                this.meterRegistry.counter(&#34;demo.counter&#34;).increment();
+                return ResponseEntity.ok(&#34;Counter&#34;);
+        }
+}</code></pre>
+<p><br>アプリケーションをビルドし、pushしてください。</p>
+<pre><code>./mvnw clean package -Dmaven.test.skip=true
+cf7 push --strategy rolling</code></pre>
+<p><br>次のエンドポイントに何回かアクセスしてください。</p>
+<pre><code>curl https://${HOST}.apps.dev.example.com/demo_counter
+curl &#34;https://${HOST}.apps.dev.example.com/demo_gauge?delta=1&#34;
+curl &#34;https://${HOST}.apps.dev.example.com/demo_gauge?delta=-1&#34;</code></pre>
+<p><code>/actuator/prometheus</code>にアクセスしてください</p>
+<ul>
+<li><code>demo_gauge</code></li>
+<li><code>demo_counter_total</code></li>
+</ul>
+<p>というメトリクスが出力されていることを確認してください。</p>
+<h2 is-upgraded><img style="width: 601.70px" src="img/7f07ae6c423645a3.png"></h2>
+<h2 is-upgraded><img style="width: 601.70px" src="img/580612391f662aad.png"></h2>
+<p>このメトリクスをApp MetricsのDashboardに追加しましょう。App Metricsの右下の+ボタンをクリックし、PromQL Explorerを開いてください[7]。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/f474f67c66a5d6a9.png"></p>
+<p>PromQL ExplorerではPrometheusのクエリ言語である<a href="https://prometheus.io/docs/prometheus/latest/querying/basics/" target="_blank">PromQL</a>を実行し結果を描画することができます。</p>
+<p>まずはGaugeを描画します。<br>入力フォームに</p>
+<pre><code>sum(demo_gauge{source_id=&#34;$sourceId&#34;})</code></pre>
+<p>を入力し、&#34;UPDATE CHART&#34;ボタンをクリックしてください。<code>demo_gauge</code>のグラフが表示されます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/d33df4dde5eae370.png"></p>
+<p>次にCounterを描画します。<br>入力フォームに</p>
+<pre><code>sum(demo_counter_total{source_id=&#34;$sourceId&#34;})</code></pre>
+<p>を入力し、&#34;UPDATE CHART&#34;ボタンをクリックしてください。<code>demo_counter_total</code>のグラフが表示されます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/74e188d9c98d6f9b.png"></p>
+<p>Counterの場合は、合計値よりも増加率を計測した方[8]が良いです。増加率は<a href="https://prometheus.io/docs/prometheus/latest/querying/functions/#rate" target="_blank">rate()</a>関数で計算できます。</p>
+<p>入力フォームに</p>
+<pre><code>sum(rate(demo_counter_total{source_id=&#34;$sourceId&#34;}[3m]))</code></pre>
+<p>を入力し、&#34;UPDATE CHART&#34;ボタンをクリックしてください。<code>demo_counter_total</code>の3分ウインドウでの秒間増加率のグラフが表示されます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/d2aec911e50d7569.png"></p>
+<p>これらのグラフをDashboardに追加しましょう。<code>demo.yml</code>を開き、<code>indicators</code>に以下を追加してください。<br></p>
+<pre><code>  indicators:
+  # ⭐️⭐️⭐️
+  - name: Demo_Counter_Total
+    promql: sum(demo_counter_total{source_id=&#34;$sourceId&#34;})
+    documentation:
+      title: Demo Counter (total)
+    presentation:
+      units: none
+      currentValue: true
+  - name: Demo_Counter_Rate
+    promql: sum(rate(demo_counter_total{source_id=&#34;$sourceId&#34;}[3m]))
+    documentation:
+      title: Demo Counter (per sec)
+    presentation:
+      units: none
+      currentValue: true
+  - name: Demo_Gauge
+    promql: sum(demo_gauge{source_id=&#34;$sourceId&#34;})
+    documentation:
+      title: Demo Gauge
+    presentation:
+      units: none
+      currentValue: true
+  # ⭐️⭐️⭐️</code></pre>
+<p>次のコマンドでグラフを登録してください。<br></p>
+<pre><code>curl -sv https://metrics.sys.dev.example.com/indicator-documents -H &#34;Authorization: $(cf7 oauth-token)&#34; --data-binary @demo.yml</code></pre>
+<p>App Metricsにアクセスして、グラフが追加されていることを確認してください。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/d0f1139dbe52e439.png"></p>
+<p>これでグラフが保存されました。</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Taskでバッチ処理を実行" duration="75">
+        <p>Cloud FoundryはWebアプリケーションのような常駐アプリケーション(Long Running Process)だけでなく短命な<a href="https://docs.cloudfoundry.org/devguide/using-tasks.html" target="_blank">Task</a>も実行できます。Task機能を用いてバッチ処理を実行します。<a href="https://spring.io/projects/spring-batch" target="_blank">Spring Batch</a>を使用して、簡単なバッチ処理をデプロイします。</p>
+<h2 is-upgraded>Taskの実行</h2>
+<p>まずはCloud FoundryのTask機能を試してみます。<code>cf run-task</code>コマンドでシンプルなコマンドを実行しましょう。</p>
+<pre><code>$ cf7 run-task hello-cf -c &#34;ls -la&#34;
+Creating task for app hello-cf in org hol / space tmaki as tmaki@pivotal.io...
+Task has been submitted successfully for execution.
+OK
+
+task name:   d8589e93
+task id:     1</code></pre>
+<p>Taskの出力は<code>cf logs</code>で確認できます。</p>
+<pre><code>$ cf7 logs hello-cf
+Retrieving logs for app hello-cf in org hol / space tmaki as tmaki@pivotal.io...
+... (略) ...
+   2020-07-25T01:57:31.30+0900 [CELL/0] OUT Cell 16987a3a-95c3-4696-a55a-545b65c79cbc creating container for instance 7ce56f39-6e3a-4aed-b85e-4f70e3651a9a
+   2020-07-25T01:57:31.96+0900 [CELL/0] OUT Cell 16987a3a-95c3-4696-a55a-545b65c79cbc successfully created container for instance 7ce56f39-6e3a-4aed-b85e-4f70e3651a9a
+   2020-07-25T01:57:37.15+0900 [APP/TASK/d8589e93/0] OUT total 0
+   2020-07-25T01:57:37.15+0900 [APP/TASK/d8589e93/0] OUT drwxr-xr-x 1 vcap vcap  72 Jul 23 10:03 .
+   2020-07-25T01:57:37.15+0900 [APP/TASK/d8589e93/0] OUT drwx------ 1 vcap vcap  93 Jul 23 10:03 ..
+   2020-07-25T01:57:37.15+0900 [APP/TASK/d8589e93/0] OUT drwxr-xr-x 4 vcap vcap  53 Jul 23 10:03 BOOT-INF
+   2020-07-25T01:57:37.15+0900 [APP/TASK/d8589e93/0] OUT drwxr-xr-x 6 vcap vcap 115 Jul 23 10:03 .java-buildpack
+   2020-07-25T01:57:37.15+0900 [APP/TASK/d8589e93/0] OUT drwxr-xr-x 3 vcap vcap  80 Jul 23 10:03 META-INF
+   2020-07-25T01:57:37.15+0900 [APP/TASK/d8589e93/0] OUT drwxr-xr-x 3 vcap vcap  29 Feb  1  1980 org
+   2020-07-25T01:57:37.15+0900 [APP/TASK/d8589e93/0] OUT Exit status 0
+   2020-07-25T01:57:37.39+0900 [CELL/0] OUT Cell 16987a3a-95c3-4696-a55a-545b65c79cbc stopping instance 7ce56f39-6e3a-4aed-b85e-4f70e3651a9a
+   2020-07-25T01:57:37.39+0900 [CELL/0] OUT Cell 16987a3a-95c3-4696-a55a-545b65c79cbc destroying container for instance 7ce56f39-6e3a-4aed-b85e-4f70e3651a9a
+... (略) ...</code></pre>
+<h2 is-upgraded>Spring Batchアプリケーション作成</h2>
+<p>次はSpring Batchを使った本格的なバッチアプリケーションを作成しましょう。<br>Spring Batchでは&#34;入力 -&gt; 加工 -&gt; 出力&#34;の処理をそれぞれ<code>ItemReader</code>、<code>ItemProcessor</code>、<code>ItemWriter</code>で行います。今回はCSVファイルを読み込み、データを加工し、データベースに保存する簡単なバッチ処理を実装します[9]。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/a1fbd68648325e1e.png"></p>
+<p>まずはSpring Batchを使ったアプリケーションの雛形を作成します。<br></p>
+<pre><code>cd ..
+curl https://start.spring.io/starter.tgz \
+    -d artifactId=billing-job \
+    -d baseDir=billing-job \
+    -d packageName=com.example \
+    -d dependencies=batch,postgresql,configuration-processor \
+    -d applicationName=BillingJobApplication | tar -xzvf -</code></pre>
+<pre><code>cd billing-job</code></pre>
+<p>① <code>src/main/java/com/example/Bill.jav</code>aを作成し、次の内容を記述してください。</p>
+<pre><code>package com.example;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+public class Bill {
+    private final Long id;
+    private final String firstName;
+    private final String lastName;
+    private final Long dataUsage;
+    private final Long minutes;
+    private final BigDecimal billAmount;
+
+    public static Bill fromUsage(Usage usage) {
+        final BigDecimal billAmount = calcBillAmount(usage.getDataUsage(), usage.getMinutes());
+        return new Bill(usage.getId(), usage.getFirstName(), usage.getLastName(), usage.getDataUsage(), usage.getMinutes(), billAmount);
+    }
+
+    public Bill(Long id, String firstName, String lastName, Long dataUsage, Long minutes, BigDecimal billAmount) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.dataUsage = dataUsage;
+        this.minutes = minutes;
+        this.billAmount = billAmount;
+    }
+
+    public static BigDecimal calcBillAmount(Long dataUsage, Long minutes) {
+        // dataUsage * 0.001 + usageMinutes * 0.01
+        return BigDecimal.valueOf(dataUsage).multiply(new BigDecimal(&#34;0.001&#34;))
+                .add(BigDecimal.valueOf(minutes).multiply(new BigDecimal(&#34;0.01&#34;)))
+                .setScale(2, RoundingMode.FLOOR);
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public Long getDataUsage() {
+        return dataUsage;
+    }
+
+    public Long getMinutes() {
+        return minutes;
+    }
+
+    public BigDecimal getBillAmount() {
+        return billAmount;
+    }
+}</code></pre>
+<p>② <code>src/main/java/com/example/Usage.java</code>を作成し、次の内容を記述してください。</p>
+<pre><code>package com.example;
+
+public class Usage {
+    private final Long id;
+    private final String firstName;
+    private final String lastName;
+    private final Long minutes;
+    private final Long dataUsage;
+
+    public Usage(Long id, String firstName, String lastName, Long minutes, Long dataUsage) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.minutes = minutes;
+        this.dataUsage = dataUsage;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public Long getMinutes() {
+        return minutes;
+    }
+
+    public Long getDataUsage() {
+        return dataUsage;
+    }
+}</code></pre>
+<p>③ <code>src/main/java/com/example/BillingConfig.java</code>を作成し、次の内容を記述してください。</p>
+<pre><code>package com.example;
+
+import javax.sql.DataSource;
+
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
+import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
+
+@Configuration
+@EnableBatchProcessing
+public class BillingConfig {
+        private final JobBuilderFactory jobBuilderFactory;
+
+        private final StepBuilderFactory stepBuilderFactory;
+
+
+        public BillingConfig(JobBuilderFactory jobBuilderFactory,
+                        StepBuilderFactory stepBuilderFactory) {
+                this.jobBuilderFactory = jobBuilderFactory;
+                this.stepBuilderFactory = stepBuilderFactory;
+        }
+
+        @Bean
+        public Job billingJob(ItemReader&lt;Usage&gt; itemReader, ItemProcessor&lt;Usage, Bill&gt; itemProcessor, ItemWriter&lt;Bill&gt; itemWriter) {
+                final Step step = this.stepBuilderFactory.get(&#34;BilliProcessing&#34;)
+                                .&lt;Usage, Bill&gt;chunk(1000)
+                                .reader(itemReader)
+                                .processor(itemProcessor)
+                                .writer(itemWriter)
+                                .build();
+                return this.jobBuilderFactory.get(&#34;BillingJob&#34;)
+                                .incrementer(new RunIdIncrementer())
+                                .start(step)
+                                .build();
+        }
+
+        @Bean
+        @StepScope
+        public FlatFileItemReader&lt;Usage&gt; usageItemReader(@Value(&#34;#{jobParameters[&#39;usageInfoFile&#39;]}&#34;) Resource usageInfoFile) {
+                return new FlatFileItemReaderBuilder&lt;Usage&gt;()
+                                .name(&#34;UsageItemReader&#34;)
+                                .resource(usageInfoFile)
+                                .delimited()
+                                .names(&#34;id&#34;, &#34;firstName&#34;, &#34;lastName&#34;, &#34;minutes&#34;, &#34;dataUsage&#34;)
+                                .fieldSetMapper(fs -&gt; new Usage(fs.readLong(&#34;id&#34;),
+                                                fs.readString(&#34;firstName&#34;),
+                                                fs.readString(&#34;lastName&#34;),
+                                                fs.readLong(&#34;minutes&#34;),
+                                                fs.readLong(&#34;dataUsage&#34;)))
+                                .linesToSkip(1)
+                                .build();
+        }
+
+        @Bean
+        public ItemProcessor&lt;Usage, Bill&gt; billItemProcessor() {
+                return new ItemProcessor&lt;Usage, Bill&gt;() {
+                        @Override
+                        public Bill process(Usage usage) throws Exception {
+                                return Bill.fromUsage(usage);
+                        }
+                };
+        }
+
+        @Bean
+        public ItemWriter&lt;Bill&gt; jdbcBillWriter(DataSource dataSource) {
+                return new JdbcBatchItemWriterBuilder&lt;Bill&gt;()
+                                .beanMapped()
+                                .dataSource(dataSource)
+                                .sql(&#34;INSERT INTO BILL_STATEMENTS (id, first_name, last_name, minutes, data_usage,bill_amount) VALUES (:id, :firstName, :lastName, :minutes, :dataUsage, :billAmount)&#34;)
+                                .build();
+        }
+}</code></pre>
+<p>④ <code>src/main/resources/application.properties</code>に次の内容を記述してください。</p>
+<pre><code>spring.datasource.initialization-mode=always
+spring.batch.initialize-schema=always
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# Local用のダミー設定
+spring.datasource.url=jdbc:postgresql://localhost:5432/billing
+spring.datasource.username=${USER}
+spring.datasource.password=
+
+# 余分なログを出力しない
+logging.level.root=WARN
+logging.level.com.example=INFO
+logging.level.org.springframework.batch=INFO
+logging.level.org.springframework.batch.core.step.tasklet.TaskletStep=DEBUG</code></pre>
+<p>⑤ <code>src/main/resources/schema.sql</code>を作成し、次の内容を記述してください。</p>
+<pre><code>CREATE TABLE IF NOT EXISTS BILL_STATEMENTS
+(
+    id          INT,
+    first_name  VARCHAR(50),
+    last_name   VARCHAR(50),
+    minutes     INT,
+    data_usage  INT,
+    bill_amount DECIMAL(10, 2)
+);</code></pre>
+<p>⑥ <code>src/main/resources/usageinfo.csv</code>を作成し、次の内容を記述してください。(<strong>ファイルの末尾に空行を入れないでください</strong>)</p>
+<pre><code>id,firstName,lastName,minutes,dataUsage
+1,jane,doe,500,1000
+2,john,doe,550,1500
+3,melissa,smith,600,1550
+4,michael,smith,650,1500
+5,mary,jones,700,1500</code></pre>
+<p>次のコマンドでアプリケーションをビルドします。</p>
+<pre><code>./mvnw clean package -Dmaven.test.skip=true</code></pre>
+<p>バッチ処理で使用するデータベースのサービスインスタンスを作成します。</p>
+<pre><code>cf7 create-service elephantsql turtle billing-db</code></pre>
+<p><code>manifest.yml</code>を作成し、次の内容を記述してください。</p>
+<pre><code>applications:
+- name: billing-job
+  # ⭐️⭐️⭐️
+  no-route: true
+  instances: 0 # ⭐️⭐️⭐️
+  path: target/billing-job-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  services:
+  - billing-db
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: &#39;{jre: {version: 11.+}}&#39;</code></pre>
+<p><code>cf push</code>でアプリケーションをデプロイしてください。</p>
+<pre><code>cf7 push</code></pre>
+<p>Taskとしてバッチ処理を実行する前にログを追跡しましょう。</p>
+<pre><code>cf7 logs billing-job </code></pre>
+<p><code>cf run-task</code>コマンドでSpring BatchアプリケーションをTaskとして実行</p>
+<pre><code>cf7 run-task billing-job -m 128m -c &#34;.java-buildpack/open_jdk_jre/bin/java org.springframework.boot.loader.JarLauncher usageInfoFile=classpath:usageinfo.csv&#34;</code></pre>
+<p>次のようなログが出力されることを確認してください。</p>
+<pre><code>   2020-07-25T13:23:38.67+0900 [API/1] OUT Added process: &#34;task&#34;
+   2020-07-25T13:23:39.62+0900 [API/0] OUT Restarted app with guid 3723ce42-081a-4bab-9e24-17a5ef205175
+   2020-07-25T13:36:48.91+0900 [CELL/0] OUT Cell 116dd279-04a8-42e6-96cf-493e727bc0bd creating container for instance 640a3d59-5ae4-4c98-8a45-699378cc57a2
+   2020-07-25T13:36:49.49+0900 [CELL/0] OUT Cell 116dd279-04a8-42e6-96cf-493e727bc0bd successfully created container for instance 640a3d59-5ae4-4c98-8a45-699378cc57a2
+   2020-07-25T13:36:53.62+0900 [APP/TASK/0a6a4dab/0] OUT   .   ____          _            __ _ _
+   2020-07-25T13:36:53.62+0900 [APP/TASK/0a6a4dab/0] OUT  /\\ / ___&#39;_ __ _ _(_)_ __  __ _ \ \ \ \
+   2020-07-25T13:36:53.62+0900 [APP/TASK/0a6a4dab/0] OUT ( ( )\___ | &#39;_ | &#39;_| | &#39;_ \/ _` | \ \ \ \
+   2020-07-25T13:36:53.62+0900 [APP/TASK/0a6a4dab/0] OUT  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+   2020-07-25T13:36:53.62+0900 [APP/TASK/0a6a4dab/0] OUT   &#39;  |____| .__|_| |_|_| |_\__, | / / / /
+   2020-07-25T13:36:53.62+0900 [APP/TASK/0a6a4dab/0] OUT  =========|_|==============|___/=/_/_/_/
+   2020-07-25T13:36:53.62+0900 [APP/TASK/0a6a4dab/0] OUT  :: Spring Boot ::        (v2.3.1.RELEASE)
+   2020-07-25T13:36:53.80+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:36:53.795  INFO 14 --- [           main] com.example.BillingJobApplication        : Starting BillingJobApplication v0.0.1-SNAPSHOT on 640a3d59-5ae4-4c98-8a45-699378cc57a2 with PID 14 (/home/vcap/app/BOOT-INF/classes started by vcap in /home/vcap/app)
+   2020-07-25T13:36:53.80+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:36:53.800  INFO 14 --- [           main] com.example.BillingJobApplication        : The following profiles are active: cloud
+   2020-07-25T13:37:00.42+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:37:00.420  INFO 14 --- [           main] o.s.b.c.r.s.JobRepositoryFactoryBean     : No database type set, using meta data indicating: POSTGRES
+   2020-07-25T13:37:00.44+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:37:00.443  INFO 14 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : No TaskExecutor has been set, defaulting to synchronous executor.
+   2020-07-25T13:37:00.51+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:37:00.517  INFO 14 --- [           main] com.example.BillingJobApplication        : Started BillingJobApplication in 7.327 seconds (JVM running for 7.937)
+   2020-07-25T13:37:04.77+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:37:04.771  INFO 14 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : Job: [SimpleJob: [name=BillingJob]] launched with the following parameters: [{run.id=1, usageInfoFile=classpath:usageinfo.csv}]
+   2020-07-25T13:37:07.61+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:37:07.613  INFO 14 --- [           main] o.s.batch.core.job.SimpleStepHandler     : Executing step: [BilliProcessing]
+   2020-07-25T13:37:09.09+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:37:09.093 DEBUG 14 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Applying contribution: [StepContribution: read=5, written=5, filtered=0, readSkips=0, writeSkips=0, processSkips=0, exitStatus=EXECUTING]
+   2020-07-25T13:37:09.29+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:37:09.294 DEBUG 14 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Saving step execution before commit: StepExecution: id=1, version=1, name=BilliProcessing, status=STARTED, exitStatus=EXECUTING, readCount=5, filterCount=0, ⭐️⭐️⭐️writeCount=5 readSkipCount=0, writeSkipCount=0, processSkipCount=0, commitCount=1, rollbackCount=0, exitDescription=
+   2020-07-25T13:37:10.30+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:37:10.302  INFO 14 --- [           main] o.s.batch.core.step.AbstractStep         : Step: [BilliProcessing] executed in 2s688ms
+   2020-07-25T13:37:12.11+0900 [APP/TASK/0a6a4dab/0] OUT 2020-07-25 04:37:12.114  INFO 14 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : Job: [SimpleJob: [name=BillingJob]] completed with the following parameters: [{run.id=1, usageInfoFile=classpath:usageinfo.csv}] and the following status: [COMPLETED] in 6s516ms
+   2020-07-25T13:37:12.13+0900 [APP/TASK/0a6a4dab/0] OUT Exit status 0
+   2020-07-25T13:37:12.26+0900 [CELL/0] OUT Cell 116dd279-04a8-42e6-96cf-493e727bc0bd stopping instance 640a3d59-5ae4-4c98-8a45-699378cc57a2
+   2020-07-25T13:37:12.26+0900 [CELL/0] OUT Cell 116dd279-04a8-42e6-96cf-493e727bc0bd destroying container for instance 640a3d59-5ae4-4c98-8a45-699378cc57a2
+   2020-07-25T13:37:12.58+0900 [CELL/0] OUT Cell 116dd279-04a8-42e6-96cf-493e727bc0bd successfully destroyed container for instance 640a3d59-5ae4-4c98-8a45-699378cc57a2</code></pre>
+<p>ログからデータを5件処理したことがわかります。</p>
+<aside class="warning"><p>Note: Exit <code>status 137 (out of memory)</code>が発生する場合は<code>-m 128m</code>を<code>-m 256m</code>に変更して実行してください。</p>
+</aside>
+<p>もう少し多くのデータを処理しましょう。次は入力データファイルをHTTP経由で取得します。Spring Batchアプリケーションのコマンド引数を変更して<code>cf run-task</code>を実行します。</p>
+<pre><code>cf7 run-task billing-job -m 128m -c &#34;.java-buildpack/open_jdk_jre/bin/java org.springframework.boot.loader.JarLauncher usageInfoFile=https://github.com/making/fakedata/raw/master/usageinfo/usageinfo-10000-en.csv&#34;</code></pre>
+<p>次のようなログが出力されることを確認してください。</p>
+<pre><code>   2020-07-25T13:45:04.86+0900 [CELL/0] OUT Cell 116dd279-04a8-42e6-96cf-493e727bc0bd creating container for instance 9afb24e4-a94c-4e0f-8dce-65ed39691fe7
+   2020-07-25T13:45:05.48+0900 [CELL/0] OUT Cell 116dd279-04a8-42e6-96cf-493e727bc0bd successfully created container for instance 9afb24e4-a94c-4e0f-8dce-65ed39691fe7
+   2020-07-25T13:45:09.75+0900 [APP/TASK/9ea5abf4/0] OUT   .   ____          _            __ _ _
+   2020-07-25T13:45:09.75+0900 [APP/TASK/9ea5abf4/0] OUT  /\\ / ___&#39;_ __ _ _(_)_ __  __ _ \ \ \ \
+   2020-07-25T13:45:09.75+0900 [APP/TASK/9ea5abf4/0] OUT ( ( )\___ | &#39;_ | &#39;_| | &#39;_ \/ _` | \ \ \ \
+   2020-07-25T13:45:09.75+0900 [APP/TASK/9ea5abf4/0] OUT  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+   2020-07-25T13:45:09.75+0900 [APP/TASK/9ea5abf4/0] OUT   &#39;  |____| .__|_| |_|_| |_\__, | / / / /
+   2020-07-25T13:45:09.75+0900 [APP/TASK/9ea5abf4/0] OUT  =========|_|==============|___/=/_/_/_/
+   2020-07-25T13:45:09.75+0900 [APP/TASK/9ea5abf4/0] OUT  :: Spring Boot ::        (v2.3.1.RELEASE)
+   2020-07-25T13:45:09.94+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:09.941  INFO 14 --- [           main] com.example.BillingJobApplication        : Starting BillingJobApplication v0.0.1-SNAPSHOT on 9afb24e4-a94c-4e0f-8dce-65ed39691fe7 with PID 14 (/home/vcap/app/BOOT-INF/classes started by vcap in /home/vcap/app)
+   2020-07-25T13:45:09.94+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:09.946  INFO 14 --- [           main] com.example.BillingJobApplication        : The following profiles are active: cloud
+   2020-07-25T13:45:16.58+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:16.584  INFO 14 --- [           main] o.s.b.c.r.s.JobRepositoryFactoryBean     : No database type set, using meta data indicating: POSTGRES
+   2020-07-25T13:45:16.61+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:16.611  INFO 14 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : No TaskExecutor has been set, defaulting to synchronous executor.
+   2020-07-25T13:45:16.68+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:16.685  INFO 14 --- [           main] com.example.BillingJobApplication        : Started BillingJobApplication in 7.396 seconds (JVM running for 8.072)
+   2020-07-25T13:45:22.93+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:22.938  INFO 14 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : Job: [SimpleJob: [name=BillingJob]] launched with the following parameters: [{run.id=2, usageInfoFile=https://github.com/making/fakedata/raw/master/usageinfo/usageinfo-10000-en.csv}]
+   2020-07-25T13:45:25.77+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:25.775  INFO 14 --- [           main] o.s.batch.core.job.SimpleStepHandler     : Executing step: [BilliProcessing]
+   2020-07-25T13:45:29.03+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:29.037 DEBUG 14 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Applying contribution: [StepContribution: read=1000, written=1000, filtered=0, readSkips=0, writeSkips=0, processSkips=0, exitStatus=EXECUTING]
+   2020-07-25T13:45:29.23+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:29.239 DEBUG 14 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Saving step execution before commit: StepExecution: id=2, version=1, name=BilliProcessing, status=STARTED, exitStatus=EXECUTING, readCount=1000, filterCount=0, writeCount=1000 readSkipCount=0, writeSkipCount=0, processSkipCount=0, commitCount=1, rollbackCount=0, exitDescription=
+   2020-07-25T13:45:30.73+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:30.731 DEBUG 14 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Applying contribution: [StepContribution: read=1000, written=1000, filtered=0, readSkips=0, writeSkips=0, processSkips=0, exitStatus=EXECUTING]
+   2020-07-25T13:45:29.23+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:29.239 DEBUG 14 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Saving step execution before commit: StepExecution: id=2, version=1, name=BilliProcessing, status=STARTED, exitStatus=EXECUTING, readCount=1000, filterCount=0, writeCount=1000 readSkipCount=0, writeSkipCount=0, processSkipCount=0, commitCount=1, rollbackCount=0, exitDescription=
+... (略) ...
+   2020-07-25T13:45:44.80+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:44.808 DEBUG 14 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Applying contribution: [StepContribution: read=0, written=0, filtered=0, readSkips=0, writeSkips=0, processSkips=0, exitStatus=EXECUTING]
+   2020-07-25T13:45:45.00+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:45.009 DEBUG 14 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Saving step execution before commit: StepExecution: id=2, version=11, name=BilliProcessing, status=STARTED, exitStatus=EXECUTING, readCount=10000, filterCount=0, ⭐️⭐️⭐️writeCount=10000 readSkipCount=0, writeSkipCount=0, processSkipCount=0, commitCount=11, rollbackCount=0, exitDescription=
+   2020-07-25T13:45:46.01+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:46.015  INFO 14 --- [           main] o.s.batch.core.step.AbstractStep         : Step: [BilliProcessing] executed in 20s240ms
+   2020-07-25T13:45:47.82+0900 [APP/TASK/9ea5abf4/0] OUT 2020-07-25 04:45:47.825  INFO 14 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : Job: [SimpleJob: [name=BillingJob]] completed with the following parameters: [{run.id=2, usageInfoFile=https://github.com/making/fakedata/raw/master/usageinfo/usageinfo-10000-en.csv}] and the following status: [COMPLETED] in 24s65ms
+   2020-07-25T13:45:47.84+0900 [APP/TASK/9ea5abf4/0] OUT Exit status 0
+   2020-07-25T13:45:48.34+0900 [CELL/0] OUT Cell 116dd279-04a8-42e6-96cf-493e727bc0bd stopping instance 9afb24e4-a94c-4e0f-8dce-65ed39691fe7
+   2020-07-25T13:45:48.34+0900 [CELL/0] OUT Cell 116dd279-04a8-42e6-96cf-493e727bc0bd destroying container for instance 9afb24e4-a94c-4e0f-8dce-65ed39691fe7
+   2020-07-25T13:45:48.64+0900 [CELL/0] OUT Cell 116dd279-04a8-42e6-96cf-493e727bc0bd successfully destroyed container for instance 9afb24e4-a94c-4e0f-8dce-65ed39691fe7</code></pre>
+<p>Taskの実行履歴は<code>cf tasks</code>コマンドで確認できます。</p>
+<pre><code>$ cf7 tasks billing-job
+Getting tasks for app billing-job in org hol / space tmaki as tmaki@pivotal.io...
+
+id   name       state       start time                      command
+2    9ea5abf4   SUCCEEDED   Sat, 25 Jul 2020 04:45:04 UTC   .java-buildpack/open_jdk_jre/bin/java org.springframework.boot.loader.JarLauncher usageInfoFile=https://github.com/making/fakedata/raw/master/usageinfo/usageinfo-10000-en.csv
+1    0a6a4dab   SUCCEEDED   Sat, 25 Jul 2020 04:36:48 UTC   .java-buildpack/open_jdk_jre/bin/java org.springframework.boot.loader.JarLauncher usageInfoFile=classpath:usageinfo.csv</code></pre>
+<p>Apps ManagerからもTaskの確認・実行を行えます。左のメニューの&#34;Tasks&#34;をクリックして確認してください。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/373790f47fbc7fcf.png"></p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="SMB Service Brokerでファイル共有" duration="15">
+        <p>ここまで作成したバッチアプリケーションで入力となるファイルはコンテナイメージに含まれているもの、あるいはHTTP経由で実行時にダウンロードしたものを使いました。<br>Tanzu Application Serviceではファイルを受け渡しするのに、コンテナ以外のVolumeとしてNFSまたはSambaを利用できます。Service Brokerを使ってコンテナにマウントするディレクトリを用意できます。NFSやSambaのサーバーは別途準備する必要があります。<br>今回はSambaを使用して、バッチアプリケーションの入力ファイルを読み込みます。<br>Samba 3.0プロトコルをサポートするマネージドサービスとして<a href="https://docs.microsoft.com/azure/storage/files/" target="_blank">Azure Files</a>を使用します。<br><br>Hands-on Workdshop用に次のように10万件のデータを含む<code>usageinfo-100000-en.csv</code>が用意されています。</p>
+<p><img style="width: 601.70px" src="img/9d32b1cd7075a902.png"><br><br>まずは次のAzure Filesにアクセスするための環境変数を定義してください。</p>
+<pre><code># 以下の環境変数を講師に聞いてください
+export STORAGE_ACCOUNT_NAME=****
+export STORAGE_ACCOUNT_KEY=****
+export SHARE_NAME=billing</code></pre>
+<p>SMB Service Brokerのサービスインスタンス<code>billing-file</code>を作成します。</p>
+<pre><code>cf7 create-service smb Existing billing-file -c &#34;{\&#34;share\&#34;: \&#34;//${STORAGE_ACCOUNT_NAME}.file.core.windows.net/${SHARE_NAME}\&#34;, \&#34;version\&#34;: \&#34;3.0\&#34;}&#34;</code></pre>
+<p><code>billing-file</code>サービスインスタンスを<code>billing-job</code>アプリにバインドします。</p>
+<pre><code>cf7 bind-service billing-job billing-file -c &#34;{\&#34;username\&#34;: \&#34;${STORAGE_ACCOUNT_NAME}\&#34;, \&#34;password\&#34;: \&#34;${STORAGE_ACCOUNT_KEY}\&#34;}&#34;</code></pre>
+<p><code>cf env</code>コマンドでマウントされたディレクトリを確認できます。</p>
+<pre><code>$ cf7 env billing-job
+Getting env variables for app billing-job in org hol / space tmaki as tmaki@pivotal.io...
+System-Provided:
+VCAP_SERVICES: {
+... (略) ...
+ &#34;smb&#34;: [
+  {
+   &#34;binding_name&#34;: null,
+   &#34;credentials&#34;: {},
+   &#34;instance_name&#34;: &#34;billing-file&#34;,
+   &#34;label&#34;: &#34;smb&#34;,
+   &#34;name&#34;: &#34;billing-file&#34;,
+   &#34;plan&#34;: &#34;Existing&#34;,
+   &#34;provider&#34;: null,
+   &#34;syslog_drain_url&#34;: null,
+   &#34;tags&#34;: [
+    &#34;smb&#34;
+   ],
+   &#34;volume_mounts&#34;: [
+    {
+     &#34;container_dir&#34;: &#34;/var/vcap/data/bbc4accc-abb0-4e2f-9178-442eda501978&#34;,
+     &#34;device_type&#34;: &#34;shared&#34;,
+     &#34;mode&#34;: &#34;rw&#34;
+    }
+   ]
+  }
+ ]
+}
+... (略) ...</code></pre>
+<p>マウントされたディレクトリの下のファイルを参照するように、Spring Batchアプリケーションのコマンド引数を変更して<code>cf run-task</code>を実行します。</p>
+<pre><code>cf7 run-task billing-job -m 256m -c &#34;.java-buildpack/open_jdk_jre/bin/java org.springframework.boot.loader.JarLauncher usageInfoFile=file://\$(echo \${VCAP_SERVICES} | jq -r &#39;. [][] | select(.instance_name == \&#34;billing-file\&#34;) | .volume_mounts[0].container_dir&#39;)/usageinfo-100000-en.csv&#34;</code></pre>
+<p>次のようなログが出力されることを確認してください。</p>
+<pre><code>   2020-08-04T23:06:24.59+0900 [APP/TASK/c318f441/0] OUT   .   ____          _            __ _ _
+   2020-08-04T23:06:24.59+0900 [APP/TASK/c318f441/0] OUT  /\\ / ___&#39;_ __ _ _(_)_ __  __ _ \ \ \ \
+   2020-08-04T23:06:24.59+0900 [APP/TASK/c318f441/0] OUT ( ( )\___ | &#39;_ | &#39;_| | &#39;_ \/ _` | \ \ \ \
+   2020-08-04T23:06:24.59+0900 [APP/TASK/c318f441/0] OUT  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+   2020-08-04T23:06:24.59+0900 [APP/TASK/c318f441/0] OUT   &#39;  |____| .__|_| |_|_| |_\__, | / / / /
+   2020-08-04T23:06:24.59+0900 [APP/TASK/c318f441/0] OUT  =========|_|==============|___/=/_/_/_/
+   2020-08-04T23:06:24.59+0900 [APP/TASK/c318f441/0] OUT  :: Spring Boot ::        (v2.3.1.RELEASE)
+   2020-08-04T23:06:24.79+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:06:24.790  INFO 15 --- [           main] com.example.BillingJobApplication        : Starting BillingJobApplication v0.0.1-SNAPSHOT on 68225a6b-c517-48f6-bd03-f3afe4d4e4d4 with PID 15 (/home/vcap/app/BOOT-INF/classes started by vcap in /home/vcap/app)
+   2020-08-04T23:06:24.79+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:06:24.796  INFO 15 --- [           main] com.example.BillingJobApplication        : The following profiles are active: cloud
+   2020-08-04T23:06:31.44+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:06:31.445  INFO 15 --- [           main] o.s.b.c.r.s.JobRepositoryFactoryBean     : No database type set, using meta data indicating: POSTGRES
+   2020-08-04T23:06:31.47+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:06:31.476  INFO 15 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : No TaskExecutor has been set, defaulting to synchronous executor.
+   2020-08-04T23:06:31.57+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:06:31.576  INFO 15 --- [           main] com.example.BillingJobApplication        : Started BillingJobApplication in 7.46 seconds (JVM running for 8.179)
+   2020-08-04T23:06:37.91+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:06:37.916  INFO 15 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : Job: [SimpleJob: [name=BillingJob]] launched with the following parameters: [{run.id=9, ⭐️⭐️⭐️usageInfoFile=file:///var/vcap/data/4e60c7cd-ae37-4a5b-8146-2e50ce49e1f7/usageinfo-100000-en.csv}]
+   2020-08-04T23:06:40.78+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:06:40.781  INFO 15 --- [           main] o.s.batch.core.job.SimpleStepHandler     : Executing step: [BilliProcessing]
+   2020-08-04T23:06:44.69+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:06:44.694 DEBUG 15 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Applying contribution: [StepContribution: read=1000, written=1000, filtered=0, readSkips=0, writeSkips=0, processSkips=0, exitStatus=EXECUTING]
+   2020-08-04T23:06:44.89+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:06:44.898 DEBUG 15 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Saving step execution before commit: StepExecution: id=9, version=1, name=BilliProcessing, status=STARTED, exitStatus=EXECUTING, readCount=1000, filterCount=0, writeCount=1000 readSkipCount=0, writeSkipCount=0, processSkipCount=0, commitCount=1, rollbackCount=0, exitDescription=
+   2020-08-04T23:06:46.41+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:06:46.415 DEBUG 15 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Applying contribution: [StepContribution: read=1000, written=1000, filtered=0, readSkips=0, writeSkips=0, processSkips=0, exitStatus=EXECUTING]
+... (略) ...
+   2020-08-04T23:09:27.50+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:09:27.506 DEBUG 15 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Saving step execution before commit: StepExecution: id=9, version=100, name=BilliProcessing, status=STARTED, exitStatus=EXECUTING, readCount=100000, filterCount=0, writeCount=100000 readSkipCount=0, writeSkipCount=0, processSkipCount=0, commitCount=100, rollbackCount=0, exitDescription=
+   2020-08-04T23:09:28.11+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:09:28.111 DEBUG 15 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Applying contribution: [StepContribution: read=0, written=0, filtered=0, readSkips=0, writeSkips=0, processSkips=0, exitStatus=EXECUTING]
+   2020-08-04T23:09:28.31+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:09:28.313 DEBUG 15 --- [           main] o.s.batch.core.step.tasklet.TaskletStep  : Saving step execution before commit: StepExecution: id=9, version=101, name=BilliProcessing, status=STARTED, exitStatus=EXECUTING, readCount=100000, filterCount=0, ⭐️⭐️⭐️writeCount=100000 readSkipCount=0, writeSkipCount=0, processSkipCount=0, commitCount=101, rollbackCount=0, exitDescription=
+   2020-08-04T23:09:29.32+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:09:29.325  INFO 15 --- [           main] o.s.batch.core.step.AbstractStep         : Step: [BilliProcessing] executed in 2m48s544ms
+   2020-08-04T23:09:31.30+0900 [APP/TASK/c318f441/0] OUT 2020-08-04 14:09:31.302  INFO 15 --- [           main] o.s.b.c.l.support.SimpleJobLauncher      : Job: [SimpleJob: [name=BillingJob]] completed with the following parameters: [{run.id=9, usageInfoFile=file:///var/vcap/data/4e60c7cd-ae37-4a5b-8146-2e50ce49e1f7/usageinfo-100000-en.csv}] and the following status: [COMPLETED] in 2m52s552ms</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="その他Cloud Nativeなアプリにするための諸々の考慮ポイント" duration="60">
+        <h2 is-upgraded>Healthcheck</h2>
+<p>アプリケーションが起動しているかどうかの判断はデフォルトでport(8080)のヘルスチェックで確認されます。portはlistenしていてもhttpレベルは機能していないという状況でリクストが来ることを防ぐため、ヘルスチェックタイプをhttpに変更することでより安全なチェックになります。</p>
+<p><a href="https://docs.pivotal.io/platform/application-service/2-8/devguide/deploy-apps/manifest-attributes.html#health-check-http-endpoint" target="_blank">https://docs.pivotal.io/platform/application-service/2-8/devguide/deploy-apps/manifest-attributes.html#health-check-http-endpoint</a></p>
+<p><code>manifest.yml</code>に<code>health-check-type</code>、<code>health-check-http-endpoint</code>を設定してください。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 256m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  # ⭐️⭐️⭐️
+  health-check-type: http
+  health-check-http-endpoint: /actuator/health
+# 以下略...</code></pre>
+<p>このヘルスチェックエンドポイントはアプリケーションが生きているか(liveness)及びアプリケーションがリクエストを受け付けて良いか(readiness)を確認するために、定期的にアクセスされます。このエンドポイントがエラーを返すと、リクエストが遮断され、コンテナが再作成されます。このような用途で使われるヘルスチェックの結果には<strong>外部サービスの状態(データベースや外部APIの利用可否)を含めるべきではありません</strong>。一般的に外部サービスはコンテナを再作成しても、状況が改善しないためです。外部サービスに障害がある場合は、コンテナを再作成するよりもアプリケーション側でエラーハンドリングした方が良いです。<br><code>/actuator/health</code>エンドポイントは<strong>外部サービスの状態を含めます。</strong>そのため、今回の用途には実は適していません。代わりに<code>/actuator/info</code>エンドポイントを使った方が良いです。</p>
+<p>Spring Boot 2.3からはアプリケーションの<strong>内部状態のみをチェック</strong>して、livenessとreadinessの結果を返すエンドポイント(<code>/actuator/health/liveness</code>及び<code>/actuator/health/readiness</code>)を使えるようになりました。<br><a href="https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html#production-ready-kubernetes-probes" target="_blank">https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html#production-ready-kubernetes-probes</a></p>
+<p>Tanzu Application Service (Cloud Foundry)ではlivenessとreadinessのチェックを別々に行いことができないため、設定するならば<code>/actuator/health/readiness</code>を使うと良いです。livenessとreadinessのチェックを有効にする場合は次の環境変数を設定する必要があります。</p>
+<ul>
+<li><code>MANAGEMENT_HEALTH_PROBES_ENABLED: true</code> (Spring Boot 2.30 - 2.3.1)</li>
+<li>M<code>ANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: true</code> (Spring Boot 2.3.2〜)<br></li>
+</ul>
+<aside class="warning"><p>Note: Spring Boot 2.3.2ではlivenessとreadinessのチェックが404エラーを返す<a href="https://github.com/spring-projects/spring-boot/issues/22562" target="_blank">バグ</a>があるので利用できません。2.3.1または2.3.3以降で試してください。</p>
+</aside>
+<p><code>manifest.yml</code>の変更は次のようになります。<br></p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 256m
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  buildpacks: 
+  - java_buildpack_offline
+  health-check-type: http
+  health-check-http-endpoint: /actuator/health/readiness # ⭐️
+# 略...
+  env:
+    # ⭐️⭐️⭐️
+    # Spring Boot ~2.3.1
+    MANAGEMENT_HEALTH_PROBES_ENABLED: true
+    # Spring Boot 2.3.2~
+    MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: true
+# 略...</code></pre>
+<p>あるいは<code>application.properties</code>に</p>
+<pre><code># Spring Boot ~2.3.1
+management.health.probes.enabled=true
+# Spring Boot 2.3.2~
+management.endpoint.health.probes.enabled=true</code></pre>
+<p>を設定してください。</p>
+<h2 is-upgraded>Graceful Shutdown</h2>
+<p>Tanzu Application Service (Cloud Foundry)ではアプリケーションの停止させるフローは</p>
+<ol type="1" start="1">
+<li><code>SIGTERM</code>シグナルを送信 (= Ctrl+Cと同等)</li>
+<li>(10秒経っても終了しない場合)<code>SIGKILL</code>シグナルを送信</li>
+</ol>
+<p>となります。</p>
+<p><a href="https://docs.pivotal.io/platform/application-service/2-8/devguide/deploy-apps/app-lifecycle.html#shutdown" target="_blank">https://docs.pivotal.io/platform/application-service/2-8/devguide/deploy-apps/app-lifecycle.html#shutdown</a></p>
+<p>1.と2.の間に最大10秒間の後処理が行えます。<br>Spring Bootアプリのデフォルトの挙動は<code>SIGTERM</code>シグナルを受信すると処理中のリクエストの中断終了処理に入ります。</p>
+<p>Spring Boot 2.3からは<code>SIGTERM</code>シグナルを受信すると、新規リクエストは受け付けないが、処理中のリクエストは完了するまで待つGraceful Shutdownがサポートされました。<br><a href="https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-graceful-shutdown" target="_blank">https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-graceful-shutdown</a></p>
+<p>Graceful Shutdownを有効にする場合、<code>manifest.yml</code>の変更は次のようになります。<br></p>
+<pre><code>applications:
+- name: hello-cf
+# 略...
+  env:
+    # ⭐️⭐️⭐️
+    SERVER_SHUTDOWN: graceful
+    SPRING_LIFECYCLE_TIMEOUTPERSHUTDOWNPHASE: 10s
+# 略...</code></pre>
+<p>あるいは<code>application.properties</code>に</p>
+<pre><code>server.shutdown=graceful
+spring.lifecycle.timeout-per-shutdown-phase=10s</code></pre>
+<p>を設定してください。</p>
+<h2 is-upgraded>複数行のログを一行にまとめる</h2>
+<p>ログや例外のスタックトレースが複数行に分かれる場合、転送先でログを検索し辛くなります。複数のログは一行にまとめた方が転送後は便利です。次の環境変数を設定すれば、一行にまとまります。</p>
+<pre><code>applications:
+- name: hello-cf
+# 略...
+  env:
+    # ⭐️⭐️⭐️
+    LOGGING_EXCEPTION_CONVERSION_WORD: &#34;\t%replace(%replace(%xEx){&#39;\n&#39;,&#39;@n@&#39;}){&#39;\t&#39;,&#39;    &#39;}%nopex&#34;
+    LOGGING_PATTERN_CONSOLE: &#34;%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${logging.pattern.level:%5p}) %clr(${PID: }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %replace(%m){&#39;\n&#39;,&#39;@n@&#39;}${logging.exception-conversion-word:%wEx}%n&#34;
+# 略...</code></pre>
+<aside class="special"><p>Note: 上記設定では改行コード(<code>\n</code>)を<code>@n@</code>に変換しています。ログを転送する先で<code>@n@</code>を<code>\n</code>に戻すとより良いです。</p>
+</aside>
+<p>別解としてはログの形式をJSONに変更して、構造化ログとして転送しても良いです。この場合は<a href="https://github.com/elastic/ecs-logging-java" target="_blank">ecs-logging-java</a>が利用できます。<br>Spring Bootアプリで使う場合は<a href="https://github.com/elastic/ecs-logging-java/blob/master/logback-ecs-encoder/README.md" target="_blank">こちら</a>を参考にしてください。</p>
+<h2 is-upgraded>ログにTrace IDを含める &amp; Trace IDを伝播させる</h2>
+<p>TBD</p>
+<p><code>pom.xml</code></p>
+<pre><code>  &lt;properties&gt;
+    &lt;java.version&gt;11&lt;/java.version&gt;
+    &lt;!-- ⭐️⭐️⭐️ --&gt;
+    &lt;spring-cloud.version&gt;Hoxton.SR7&lt;/spring-cloud.version&gt;
+  &lt;/properties&gt;</code></pre>
+<pre><code>  &lt;dependencies&gt;
+    &lt;!-- ⭐️⭐️⭐️ --&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-cloud-starter-sleuth&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+    &lt;!-- 略 --&gt;
+  &lt;/dependencies&gt;
+  &lt;!-- ⭐️⭐️⭐️ --&gt;
+  &lt;dependencyManagement&gt;
+    &lt;dependencies&gt;
+      &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-cloud-dependencies&lt;/artifactId&gt;
+        &lt;version&gt;${spring-cloud.version}&lt;/version&gt;
+        &lt;type&gt;pom&lt;/type&gt;
+        &lt;scope&gt;import&lt;/scope&gt;
+      &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+  &lt;/dependencyManagement&gt;</code></pre>
+<p><code>src/main/java/com/example/ApiProperties.java</code></p>
+<pre><code>package com.example;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Component
+@ConfigurationProperties(prefix = &#34;api&#34;)
+public class ApiProperties {
+
+        private String key = &#34;SECRET&#34;;
+
+        private String backendUrl; // ⭐️⭐️⭐️
+
+        public String getKey() {
+                return key;
+        }
+
+        public void setKey(String key) {
+                this.key = key;
+        }
+
+       // ⭐️⭐️⭐️
+        public String getBackendUrl() {
+                return backendUrl;
+        }
+
+        public void setBackendUrl(String backendUrl) {
+                this.backendUrl = backendUrl;
+        }
+}</code></pre>
+<p><code>src/main/java/com/example/FrontController.java</code></p>
+<pre><code>package com.example;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+@RestController
+public class FrontController {
+        private final RestTemplate restTemplate;
+
+        private final Logger log = LoggerFactory.getLogger(FrontController.class);
+
+        public FrontController(RestTemplateBuilder builder, ApiProperties props) {
+                this.restTemplate = builder.rootUri(props.getBackendUrl()).build();
+        }
+
+        @GetMapping(path = &#34;/front&#34;)
+        public JsonNode front() {
+                log.info(&#34;Calling backend...&#34;);
+                return this.restTemplate.getForObject(&#34;/&#34;, JsonNode.class);
+        }
+}</code></pre>
+<p><code>src/main/resources/application.properties</code>に</p>
+<pre><code>spring.application.name=hello-cf</code></pre>
+<p>を追記してください。</p>
+<p><code>manifest.yml</code></p>
+<pre><code># ...
+  env:
+  # ...
+    API_BACKENDURL: https://demo-api.apps.dev.example.com</code></pre>
+<p>次のコマンドでアプリケーションをビルドとpushをします。</p>
+<pre><code>./mvnw clean package -Dmaven.test.skip=true
+cf7 push</code></pre>
+<p>次のエンドポイントに何回かアクセスしてください。</p>
+<pre><code>curl -sv https://${HOST}.apps.dev.example.com/front | jq .</code></pre>
+<h2 is-upgraded>ZipkinにTraceデータを送信する</h2>
+<p>TBD</p>
+<pre><code>  &lt;dependencies&gt;
+    &lt;!-- ⭐️⭐️⭐️ --&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-cloud-starter-zipkin&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+    &lt;!-- 略 --&gt;
+  &lt;/dependencies&gt;</code></pre>
+<p><code>src/main/resources/application.properties</code>に</p>
+<pre><code>spring.sleuth.sampler.rate=30</code></pre>
+<p>を設定してください。<br></p>
+<pre><code>applications:
+- name: hello-cf
+# 略...
+  env:
+    # ⭐️⭐️⭐️
+    SPRING_ZIPKIN_BASE_URL: https://zipkin.apps.dev.example.com
+    SPRING_ZIPKIN_SERVICE_NAME: ${vcap.application.organization_name}:${vcap.application.space_name}:${vcap.application.application_name}
+    SPRING_SLEUTH_WEB_ADDITIONALSKIPPATTERN: /actuator.*|/cloudfoundryapplication.*
+# 略...</code></pre>
+<p>次のコマンドでアプリケーションをビルドとpushをします。</p>
+<pre><code>./mvnw clean package -Dmaven.test.skip=true
+cf7 push</code></pre>
+<p>次のエンドポイントに何回かアクセスしてください。</p>
+<pre><code>curl -sv https://${HOST}.apps.dev.example.com/front | jq .</code></pre>
+<p><a href="https://zipkin.apps.dev.example.com" target="_blank">https://zipkin.apps.dev.example.com</a> にアクセスしてください。</p>
+<p>チーム専用のZipkin Serverが欲しい場合、別途デプロイ可能です。</p>
+<p><code>zipkin</code>ディレクトリを作成して、その下で<code>manifest.yml</code>を作成し、次の内容を記述してください。</p>
+<pre><code>applications:
+- name: zipkin
+  memory: 1g
+  random-route: true
+  docker:
+    image: openzipkin/zipkin-slim
+  env:
+    MEM_MAX_SPANS: 50000</code></pre>
+<p>これで<code>cf push</code> / <code>cf7 push</code>を実行してデプロイしてください。</p>
+<p>[1] Blueを削除した場合は、過去のソースコードを再度<code>cf push</code>すればで切り戻すことができます。</p>
+<p>[2]このService BrokerはProduction環境での利用は想定されていません。</p>
+<p>[3] Dashboardは <a href="https://raw.githubusercontent.com/making/prometheus-kustomize/master/base/grafana/spring-boot.json" target="_blank">https://raw.githubusercontent.com/making/prometheus-kustomize/master/base/grafana/spring-boot.json</a> をインポートしています。</p>
+<p>[4] 他にもDistributionSummary, LongTaskTimerなどあります</p>
+<p>[5] Counterで表現できる場合はGaugeを使わないでください</p>
+<p>[6] Timerで表現できる場合はCounterを使わないでください</p>
+<p>[7] クリックしても反応がなければ別のブラウザを試してみてください。</p>
+<p>[8] Counterはリセットされます。リセットされた後の合計値に意味はありません。また合計値が大きくなると増分が小さい場合にグラフでは見えづらくなります。</p>
+<p>[9] <a href="https://dataflow.cfapps.io/docs/batch-developer-guides/batch/spring-batch/" target="_blank">https://dataflow.cfapps.io/docs/batch-developer-guides/batch/spring-batch/</a> の内容を改変しました。</p>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/codelab-elements/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/prettify.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/codelab-elements.js"></script>
+  <script src="//support.google.com/inapp/api.js"></script>
+
+</body>
+</html>

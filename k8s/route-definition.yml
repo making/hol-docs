@@ -1,0 +1,15 @@
+apiVersion: gateway.cloud.ik.am/v1beta1
+kind: RouteDefinition
+metadata:
+  name: hol-contents
+  namespace: blog
+spec:
+  route:
+    order: -10
+    predicates:
+    - Host={hol}-hol.dev.ik.am
+    filters:
+    - PreserveHostHeader=
+    - SetRequestHeader=Host, {hol}-hol.apps.pcfone.io
+    - RequestLogging=
+    uri: https://api.run.pcfone.io:443

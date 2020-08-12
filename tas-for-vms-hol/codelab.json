@@ -1,0 +1,24 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-77753174-1",
+  "updated": "2020-08-12T02:41:04Z",
+  "id": "tas-for-vms-hol",
+  "duration": 600,
+  "title": "VMware Tanzu Application Service (Cloud Foundry) Hands-on Lab",
+  "authors": "making",
+  "summary": "VMware Tanzu Application Service (Cloud Foundry) Hands-on Lab",
+  "source": "1bNd_n7fOyV1Axbi6AlLnhjyl-_PJkRXXd2h7jgujNEw",
+  "theme": "tanzu-application-service",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "Tanzu Application Service",
+    "Cloud Foundry"
+  ],
+  "tags": [],
+  "feedback": "https://docs.google.com/document/d/1bNd_n7fOyV1Axbi6AlLnhjyl-_PJkRXXd2h7jgujNEw/edit?usp=sharing",
+  "url": "tas-for-vms-hol"
+}
