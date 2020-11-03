@@ -1,0 +1,25 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-77753174-1",
+  "updated": "2020-11-03T07:10:21Z",
+  "id": "tas-for-k8s-hol",
+  "duration": 525,
+  "title": "VMware Tanzu Application Service (Cloud Foundry) for Kubernetes Hands-on Lab",
+  "authors": "making",
+  "summary": "VMware Tanzu Application Service (Cloud Foundry) for Kubernetes Hands-on Lab",
+  "source": "1bgn4fFkVU7AqrbFPZkDY9Sr5rjKmMal74-Aq30qsPPk",
+  "theme": "tanzu-application-service",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "Tanzu Application Service",
+    "Cloud Foundry",
+    "Kubernetes"
+  ],
+  "tags": [],
+  "feedback": "https://docs.google.com/document/d/1bgn4fFkVU7AqrbFPZkDY9Sr5rjKmMal74-Aq30qsPPk/edit",
+  "url": "tas-for-k8s-hol"
+}
