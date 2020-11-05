@@ -1010,8 +1010,31 @@ cf push --strategy rolling</code></pre>
 
       </google-codelab-step>
     
-      <google-codelab-step label="Prometheusを使ったメトリクス収集" duration="60">
-        <p>TBD</p>
+      <google-codelab-step label="アプリケーションのメモリの節約" duration="20">
+        <p><br>ここまで<code>hello-cf</code>アプリケーションに768MBのメモリを割り当てましたが、このアプリケーションではもっと少ないメモリでも動作します。<br>Javaのアプリケーションへのメモリ割り当てはBuildpackに含まれる<a href="https://github.com/cloudfoundry/java-buildpack-memory-calculator/tree/v3.13.0.RELEASE" target="_blank">Memory Calculator</a>よって次の図のように自動で決まります。</p>
+<p class="image-container"><img style="width: 601.70px" src="img/a00e6f9fa2cc1956.png"></p>
+<p>固定値として確保されているReserved Code Cacheの240MBと、Thread Stackの250MB (1スレッドあたり1MB x 250スレッド)の割合が多く、ここを小さくすれば768MBから大きく減らせることがわかります。<br>ここではReserved Code Cacheを32MB、Thread Stackを10MB (1スレッドあたり512KB x 20スレッド)に変更し、コンテナのメモリサイズを256MBまで小さくしてみましょう。設定可能な環境変数は <a href="https://github.com/paketo-buildpacks/bellsoft-liberica#configuration" target="_blank">https://github.com/paketo-buildpacks/bellsoft-liberica#configuration</a> を確認してください。<br>また、想定スレッド数を20に減らすにあたり、アプリケーションサーバー(Tomcat)がこれより多くのスレッドを作成しないように、<code>servcer.tomcat.threads.max</code>プロパティでスレッドの上限値を設定しておきます。</p>
+<pre><code>applications:
+- name: hello-cf
+  random-route: true
+  instances: 1
+  memory: 256m # ⭐️⭐️⭐️
+  path: target/hello-cf-0.0.1-SNAPSHOT.jar
+  services:
+  - hello
+  - car-db
+  env:
+    JAVA_TOOL_OPTIONS: -XX:ReservedCodeCacheSize=32M -Xss512k # ⭐️⭐️⭐️
+    BPL_JVM_THREAD_COUNT: 20 # ⭐️⭐️⭐️
+    SERVER_TOMCAT_THREADS_MAX: 4 # ⭐️⭐️⭐️
+    SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE: 2
+    MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: info,health,env,prometheus
+    INFO_VERSION: 0.0.7 # ⭐️
+    INFO_JAVA_VERSION: ${java.runtime.version}
+    INFO_JAVA_VENDOR: ${java.vm.vendor}
+    API_KEY: ${vcap.services.hello.credentials.api-key}</code></pre>
+<p>pushして設定を反映してください。</p>
+<pre><code>cf push --strategy rolling</code></pre>
 
 
       </google-codelab-step>
